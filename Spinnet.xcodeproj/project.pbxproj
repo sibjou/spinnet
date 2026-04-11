@@ -8,6 +8,14 @@
 
 /* Begin PBXBuildFile section */
 		CBD58DC52F8A6B7A00E92606 /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = CBD58DC42F8A6B7A00E92606 /* GoogleService-Info.plist */; };
+		CBD58DC82F8A70CD00E92606 /* AuthService.swift in Sources */ = {isa = PBXBuildFile; fileRef = CBD58DC72F8A70BA00E92606 /* AuthService.swift */; };
+		CBD58DCA2F8A710300E92606 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CBD58DC92F8A70FB00E92606 /* ContentView.swift */; };
+		CBD58DCC2F8A713C00E92606 /* LoginView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CBD58DCB2F8A713100E92606 /* LoginView.swift */; };
+		CBD58DCE2F8A716900E92606 /* RegisterView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CBD58DCD2F8A716400E92606 /* RegisterView.swift */; };
+		CBD58DD02F8A719100E92606 /* MainTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CBD58DCF2F8A718E00E92606 /* MainTabView.swift */; };
+		CBD58DD22F8A71B700E92606 /* CreateRequestView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CBD58DD12F8A71A800E92606 /* CreateRequestView.swift */; };
+		CBD58DD42F8A71D300E92606 /* FeedView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CBD58DD32F8A71CE00E92606 /* FeedView.swift */; };
+		CBD58DD62F8A71EB00E92606 /* ProfileView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CBD58DD52F8A71E400E92606 /* ProfileView.swift */; };
 		CBD58DD92F8A730F00E92606 /* FirebaseAuth in Frameworks */ = {isa = PBXBuildFile; productRef = CBD58DD82F8A730F00E92606 /* FirebaseAuth */; };
 		CBD58DDB2F8A731900E92606 /* FirebaseFirestore in Frameworks */ = {isa = PBXBuildFile; productRef = CBD58DDA2F8A731900E92606 /* FirebaseFirestore */; };
 		CBD58DDD2F8A732800E92606 /* FirebaseAnalytics in Frameworks */ = {isa = PBXBuildFile; productRef = CBD58DDC2F8A732800E92606 /* FirebaseAnalytics */; };
@@ -16,12 +24,25 @@
 /* Begin PBXFileReference section */
 		CBD58DB62F8A60A500E92606 /* Spinnet.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Spinnet.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		CBD58DC42F8A6B7A00E92606 /* GoogleService-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "GoogleService-Info.plist"; sourceTree = "<group>"; };
+		CBD58DC72F8A70BA00E92606 /* AuthService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthService.swift; sourceTree = "<group>"; };
+		CBD58DC92F8A70FB00E92606 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+		CBD58DCB2F8A713100E92606 /* LoginView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoginView.swift; sourceTree = "<group>"; };
+		CBD58DCD2F8A716400E92606 /* RegisterView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RegisterView.swift; sourceTree = "<group>"; };
+		CBD58DCF2F8A718E00E92606 /* MainTabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainTabView.swift; sourceTree = "<group>"; };
+		CBD58DD12F8A71A800E92606 /* CreateRequestView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreateRequestView.swift; sourceTree = "<group>"; };
+		CBD58DD32F8A71CE00E92606 /* FeedView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FeedView.swift; sourceTree = "<group>"; };
+		CBD58DD52F8A71E400E92606 /* ProfileView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		CBD58DB82F8A60A500E92606 /* Spinnet */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = Spinnet;
+			sourceTree = "<group>";
+		};
+		CBD58DDE2F8A8EC600E92606 /* App */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = App;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -43,6 +64,9 @@
 		CBD58DAD2F8A60A500E92606 = {
 			isa = PBXGroup;
 			children = (
+				CBD58DE22F8A8EE800E92606 /* Views */,
+				CBD58DE12F8A8EDF00E92606 /* Services */,
+				CBD58DDE2F8A8EC600E92606 /* App */,
 				CBD58DB82F8A60A500E92606 /* Spinnet */,
 				CBD58DB72F8A60A500E92606 /* Products */,
 				CBD58DC42F8A6B7A00E92606 /* GoogleService-Info.plist */,
@@ -65,6 +89,28 @@
 			name = Frameworks;
 			sourceTree = "<group>";
 		};
+		CBD58DE12F8A8EDF00E92606 /* Services */ = {
+			isa = PBXGroup;
+			children = (
+				CBD58DC72F8A70BA00E92606 /* AuthService.swift */,
+			);
+			path = Services;
+			sourceTree = "<group>";
+		};
+		CBD58DE22F8A8EE800E92606 /* Views */ = {
+			isa = PBXGroup;
+			children = (
+				CBD58DCB2F8A713100E92606 /* LoginView.swift */,
+				CBD58DCD2F8A716400E92606 /* RegisterView.swift */,
+				CBD58DC92F8A70FB00E92606 /* ContentView.swift */,
+				CBD58DD12F8A71A800E92606 /* CreateRequestView.swift */,
+				CBD58DD32F8A71CE00E92606 /* FeedView.swift */,
+				CBD58DCF2F8A718E00E92606 /* MainTabView.swift */,
+				CBD58DD52F8A71E400E92606 /* ProfileView.swift */,
+			);
+			path = Views;
+			sourceTree = "<group>";
+		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
@@ -82,6 +128,7 @@
 			);
 			fileSystemSynchronizedGroups = (
 				CBD58DB82F8A60A500E92606 /* Spinnet */,
+				CBD58DDE2F8A8EC600E92606 /* App */,
 			);
 			name = Spinnet;
 			packageProductDependencies = (
@@ -146,6 +193,14 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				CBD58DC82F8A70CD00E92606 /* AuthService.swift in Sources */,
+				CBD58DD42F8A71D300E92606 /* FeedView.swift in Sources */,
+				CBD58DD62F8A71EB00E92606 /* ProfileView.swift in Sources */,
+				CBD58DD22F8A71B700E92606 /* CreateRequestView.swift in Sources */,
+				CBD58DCA2F8A710300E92606 /* ContentView.swift in Sources */,
+				CBD58DCE2F8A716900E92606 /* RegisterView.swift in Sources */,
+				CBD58DD02F8A719100E92606 /* MainTabView.swift in Sources */,
+				CBD58DCC2F8A713C00E92606 /* LoginView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
