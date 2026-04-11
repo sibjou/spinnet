@@ -6,6 +6,7 @@ struct LoginView: View {
     
     @State private var email = ""
     @State private var password = ""
+    @State private var showResetPassword = false
     
     var body: some View {
         NavigationStack {
@@ -16,7 +17,7 @@ struct LoginView: View {
                     Image(systemName: "sportscourt.fill")
                         .font(.system(size: 60))
                         .foregroundColor(.green)
-                    Text("PongMatch")
+                    Text("Spinnet")
                         .font(.largeTitle.bold())
                     Text("Найди спарринг-партнёра")
                         .font(.subheadline)
@@ -38,9 +39,10 @@ struct LoginView: View {
                 
                 if let error = authService.errorMessage {
                     Text(error)
-                        .foregroundColor(.red)
+                        .foregroundColor(error.contains("отправлено") ? .green : .red)
                         .font(.caption)
                         .padding(.horizontal)
+                        .multilineTextAlignment(.center)
                 }
                 
                 Button(action: { authService.login(email: email, password: password) }) {
@@ -57,6 +59,16 @@ struct LoginView: View {
                 .cornerRadius(12)
                 .padding(.horizontal)
                 .disabled(email.isEmpty || password.isEmpty || authService.isLoading)
+                
+                Button("Забыли пароль?") {
+                    if email.isEmpty {
+                        authService.errorMessage = "Введите email выше, затем нажмите «Забыли пароль?»"
+                    } else {
+                        authService.resetPassword(email: email)
+                    }
+                }
+                .foregroundColor(.secondary)
+                .font(.caption)
                 
                 Button("Нет аккаунта? Зарегистрироваться") {
                     showRegister = true
