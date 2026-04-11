@@ -111,10 +111,10 @@ class AuthService: ObservableObject {
     
     // MARK: - Выход из аккаунта
     func logout() {
-        try? Auth.auth().signOut() // Выходим из Firebase Auth
-        isLoggedIn = false
-        currentUserId = nil
-    }
+            try? Auth.auth().signOut() // Выходим из Firebase Auth
+            isLoggedIn = false
+            currentUserId = nil
+        }
     
     // MARK: - Сброс пароля
     // Firebase отправит письмо на email со ссылкой для сброса

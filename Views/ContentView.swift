@@ -5,12 +5,21 @@ struct ContentView: View {
     @State private var showRegister = false
     
     var body: some View {
-        if authService.isLoggedIn {
-            MainTabView(authService: authService)
-        } else if showRegister {
-            RegisterView(showRegister: $showRegister, authService: authService)
-        } else {
-            LoginView(showRegister: $showRegister, authService: authService)
+        // Следим за изменением isLoggedIn
+        Group {
+            if authService.isLoggedIn {
+                MainTabView(authService: authService)
+            } else if showRegister {
+                RegisterView(showRegister: $showRegister, authService: authService)
+            } else {
+                LoginView(showRegister: $showRegister, authService: authService)
+            }
+        }
+        // Когда пользователь выходит — сбрасываем на экран входа
+        .onChange(of: authService.isLoggedIn) { _, newValue in
+            if !newValue {
+                showRegister = false
+            }
         }
     }
 }
