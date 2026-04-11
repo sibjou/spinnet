@@ -1,0 +1,11 @@
+# Xcode
+*.xcuserstate
+xcuserdata/
+DerivedData/
+build/
+
+# Firebase keys
+GoogleService-Info.plist
+
+# OS files
+.DS_Store
