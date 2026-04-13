@@ -1,18 +1,20 @@
 import SwiftUI
 
+// MARK: - LoginView
+// Экран входа в приложение
 struct LoginView: View {
     @Binding var showRegister: Bool
     @ObservedObject var authService: AuthService
     
     @State private var email = ""
     @State private var password = ""
-    @State private var showResetPassword = false
     
     var body: some View {
         NavigationStack {
             VStack(spacing: 24) {
                 Spacer()
                 
+                // Логотип и название
                 VStack(spacing: 8) {
                     Image(systemName: "sportscourt.fill")
                         .font(.system(size: 60))
@@ -26,6 +28,7 @@ struct LoginView: View {
                 
                 Spacer()
                 
+                // Поля ввода
                 VStack(spacing: 16) {
                     TextField("Email", text: $email)
                         .keyboardType(.emailAddress)
@@ -37,6 +40,7 @@ struct LoginView: View {
                 }
                 .padding(.horizontal)
                 
+                // Сообщение об ошибке
                 if let error = authService.errorMessage {
                     Text(error)
                         .foregroundColor(error.contains("отправлено") ? .green : .red)
@@ -45,6 +49,8 @@ struct LoginView: View {
                         .multilineTextAlignment(.center)
                 }
                 
+                // Кнопка входа
+                // .contentShape(Rectangle()) — делает ВСЮ область кнопки нажимаемой
                 Button(action: { authService.login(email: email, password: password) }) {
                     if authService.isLoading {
                         ProgressView().tint(.white)
@@ -54,12 +60,14 @@ struct LoginView: View {
                 }
                 .frame(maxWidth: .infinity)
                 .padding()
-                .background(Color.green)
+                .background(email.isEmpty || password.isEmpty ? Color.gray.opacity(0.3) : Color.green)
                 .foregroundColor(.white)
                 .cornerRadius(12)
                 .padding(.horizontal)
+                .contentShape(Rectangle()) //  Исправление бага 1: вся область кликабельна
                 .disabled(email.isEmpty || password.isEmpty || authService.isLoading)
                 
+                // Забыли пароль
                 Button("Забыли пароль?") {
                     if email.isEmpty {
                         authService.errorMessage = "Введите email выше, затем нажмите «Забыли пароль?»"
@@ -70,7 +78,10 @@ struct LoginView: View {
                 .foregroundColor(.secondary)
                 .font(.caption)
                 
+                // Переход к регистрации
+                // Исправление бага 2: очищаем ошибку при переходе
                 Button("Нет аккаунта? Зарегистрироваться") {
+                    authService.errorMessage = nil  // ← Сброс ошибки
                     showRegister = true
                 }
                 .foregroundColor(.green)

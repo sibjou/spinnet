@@ -138,24 +138,28 @@ class AuthService: ObservableObject {
     // Firebase возвращает ошибки на английском — мы переводим их
     // Каждый код ошибки соответствует определённой ситуации
     func russianError(_ error: Error) -> String {
-        let code = (error as NSError).code
-        switch code {
-        case 17008:
-            return "Неверный формат email"
-        case 17009:
-            return "Неверный пароль"
-        case 17011:
-            return "Пользователь с таким email не найден"
-        case 17007:
-            return "Этот email уже зарегистрирован"
-        case 17026:
-            return "Пароль должен быть не менее 6 символов"
-        case 17010:
-            return "Слишком много попыток. Попробуйте позже"
-        case 17020:
-            return "Нет подключения к интернету"
-        default:
-            return "Ошибка: \(error.localizedDescription)"
-        }
-    }
+           let code = (error as NSError).code
+           switch code {
+           case 17008:
+               return "Неверный формат email"
+           case 17009:
+               return "Неверный пароль"
+           case 17011:
+               return "Пользователь с таким email не найден"
+           case 17007:
+               return "Этот email уже зарегистрирован"
+           case 17026:
+               return "Пароль должен быть не менее 6 символов"
+           case 17010:
+               return "Слишком много попыток. Попробуйте позже"
+           case 17020:
+               return "Нет подключения к интернету"
+           case 17999:
+               return "Ошибка соединения. Проверьте интернет и попробуйте снова"
+           case 17004:
+               return "Неверный email или пароль"
+           default:
+               return "Произошла ошибка. Попробуйте ещё раз"
+           }
+       }
 }

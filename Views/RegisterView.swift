@@ -1,5 +1,7 @@
 import SwiftUI
 
+// MARK: - RegisterView
+// Экран регистрации нового пользователя
 struct RegisterView: View {
     @Binding var showRegister: Bool
     @ObservedObject var authService: AuthService
@@ -42,9 +44,12 @@ struct RegisterView: View {
                     }
                 }
                 
+                // Ошибка — показываем ТОЛЬКО если она появилась на экране регистрации
                 if let error = authService.errorMessage {
                     Section {
-                        Text(error).foregroundColor(.red)
+                        Text(error)
+                            .foregroundColor(.red)
+                            .font(.caption)
                     }
                 }
                 
@@ -73,8 +78,15 @@ struct RegisterView: View {
             .navigationTitle("Регистрация")
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
-                    Button("Назад") { showRegister = false }
+                    Button("Назад") {
+                        authService.errorMessage = nil  // ← Сброс ошибки при возврате
+                        showRegister = false
+                    }
                 }
+            }
+            // Сбрасываем ошибку при появлении экрана
+            .onAppear {
+                authService.errorMessage = nil
             }
         }
     }
