@@ -7,6 +7,10 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		CB3849A52F8D4B8D004CFA10 /* TournamentService.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB3849A42F8D4B89004CFA10 /* TournamentService.swift */; };
+		CB3849A72F8D4BEB004CFA10 /* TournamentListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB3849A62F8D4BDB004CFA10 /* TournamentListView.swift */; };
+		CB3849A92F8D4C43004CFA10 /* CreateTournamentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB3849A82F8D4C3F004CFA10 /* CreateTournamentView.swift */; };
+		CB3849AB2F8D4C68004CFA10 /* TournamentDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB3849AA2F8D4C64004CFA10 /* TournamentDetailView.swift */; };
 		CB6664C32F8AA40900DB34E9 /* FeedView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB6664C12F8AA3FA00DB34E9 /* FeedView.swift */; };
 		CB6664C72F8AA42700DB34E9 /* RequestCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB6664C62F8AA42700DB34E9 /* RequestCardView.swift */; };
 		CBD58DC52F8A6B7A00E92606 /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = CBD58DC42F8A6B7A00E92606 /* GoogleService-Info.plist */; };
@@ -23,6 +27,10 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		CB3849A42F8D4B89004CFA10 /* TournamentService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TournamentService.swift; sourceTree = "<group>"; };
+		CB3849A62F8D4BDB004CFA10 /* TournamentListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TournamentListView.swift; sourceTree = "<group>"; };
+		CB3849A82F8D4C3F004CFA10 /* CreateTournamentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreateTournamentView.swift; sourceTree = "<group>"; };
+		CB3849AA2F8D4C64004CFA10 /* TournamentDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TournamentDetailView.swift; sourceTree = "<group>"; };
 		CB6664C12F8AA3FA00DB34E9 /* FeedView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FeedView.swift; sourceTree = "<group>"; };
 		CB6664C62F8AA42700DB34E9 /* RequestCardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RequestCardView.swift; sourceTree = "<group>"; };
 		CBD58DB62F8A60A500E92606 /* Spinnet.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Spinnet.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -99,6 +107,7 @@
 		CBD58DE12F8A8EDF00E92606 /* Services */ = {
 			isa = PBXGroup;
 			children = (
+				CB3849A42F8D4B89004CFA10 /* TournamentService.swift */,
 				CBD58DC72F8A70BA00E92606 /* AuthService.swift */,
 			);
 			path = Services;
@@ -107,6 +116,8 @@
 		CBD58DE22F8A8EE800E92606 /* Views */ = {
 			isa = PBXGroup;
 			children = (
+				CB3849A82F8D4C3F004CFA10 /* CreateTournamentView.swift */,
+				CB3849A62F8D4BDB004CFA10 /* TournamentListView.swift */,
 				CBD58DCB2F8A713100E92606 /* LoginView.swift */,
 				CBD58DCD2F8A716400E92606 /* RegisterView.swift */,
 				CBD58DC92F8A70FB00E92606 /* ContentView.swift */,
@@ -116,6 +127,7 @@
 				CBD58DE52F8AA1C100E92606 /* Feed */,
 				CB6664C62F8AA42700DB34E9 /* RequestCardView.swift */,
 				CB6664C12F8AA3FA00DB34E9 /* FeedView.swift */,
+				CB3849AA2F8D4C64004CFA10 /* TournamentDetailView.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -207,11 +219,15 @@
 				CB6664C32F8AA40900DB34E9 /* FeedView.swift in Sources */,
 				CBD58DD62F8A71EB00E92606 /* ProfileView.swift in Sources */,
 				CBD58DD22F8A71B700E92606 /* CreateRequestView.swift in Sources */,
+				CB3849AB2F8D4C68004CFA10 /* TournamentDetailView.swift in Sources */,
 				CBD58DCA2F8A710300E92606 /* ContentView.swift in Sources */,
 				CB6664C72F8AA42700DB34E9 /* RequestCardView.swift in Sources */,
+				CB3849A92F8D4C43004CFA10 /* CreateTournamentView.swift in Sources */,
 				CBD58DCE2F8A716900E92606 /* RegisterView.swift in Sources */,
+				CB3849A52F8D4B8D004CFA10 /* TournamentService.swift in Sources */,
 				CBD58DD02F8A719100E92606 /* MainTabView.swift in Sources */,
 				CBD58DCC2F8A713C00E92606 /* LoginView.swift in Sources */,
+				CB3849A72F8D4BEB004CFA10 /* TournamentListView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

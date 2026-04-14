@@ -49,23 +49,26 @@ struct LoginView: View {
                         .multilineTextAlignment(.center)
                 }
                 
-                // Кнопка входа
-                // .contentShape(Rectangle()) — делает ВСЮ область кнопки нажимаемой
-                Button(action: { authService.login(email: email, password: password) }) {
-                    if authService.isLoading {
-                        ProgressView().tint(.white)
-                    } else {
-                        Text("Войти").fontWeight(.semibold)
-                    }
-                }
-                .frame(maxWidth: .infinity)
-                .padding()
-                .background(email.isEmpty || password.isEmpty ? Color.gray.opacity(0.3) : Color.green)
-                .foregroundColor(.white)
-                .cornerRadius(12)
-                .padding(.horizontal)
-                .contentShape(Rectangle()) //  Исправление бага 1: вся область кликабельна
-                .disabled(email.isEmpty || password.isEmpty || authService.isLoading)
+                // Кнопка входа — вся зелёная область нажимается
+                                Button {
+                                    authService.login(email: email, password: password)
+                                } label: {
+                                    if authService.isLoading {
+                                        ProgressView().tint(.white)
+                                            .frame(maxWidth: .infinity)
+                                            .padding()
+                                    } else {
+                                        Text("Войти")
+                                            .fontWeight(.semibold)
+                                            .frame(maxWidth: .infinity)
+                                            .padding()
+                                    }
+                                }
+                                .background(email.isEmpty || password.isEmpty ? Color.gray.opacity(0.3) : Color.green)
+                                .foregroundColor(.white)
+                                .cornerRadius(12)
+                                .padding(.horizontal)
+                                .disabled(email.isEmpty || password.isEmpty || authService.isLoading)
                 
                 // Забыли пароль
                 Button("Забыли пароль?") {

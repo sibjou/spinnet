@@ -1,5 +1,8 @@
 import SwiftUI
 
+// MARK: - MainTabView
+// Главный экран с нижней навигацией
+// TabView — стандартный компонент iOS для нижних вкладок
 struct MainTabView: View {
     @ObservedObject var authService: AuthService
     
@@ -11,7 +14,7 @@ struct MainTabView: View {
                     Text("Лента")
                 }
             
-            Text("Турниры — скоро")
+            TournamentListView(authService: authService)
                 .tabItem {
                     Image(systemName: "trophy")
                     Text("Турниры")
