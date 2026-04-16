@@ -21,12 +21,14 @@ class AuthService: ObservableObject {
     private let db = Firestore.firestore()
     
     // MARK: - init (Инициализация)
-    // Вызывается автоматически при создании AuthService
-    // Проверяет: может пользователь уже был залогинен раньше?
+    // При запуске приложения проверяем: авторизован ли пользователь
+    // И проверяем что его аккаунт ещё существует в базе
     init() {
         if let user = Auth.auth().currentUser {
             self.isLoggedIn = true
             self.currentUserId = user.uid
+            // Проверяем что пользователь не был удалён администратором
+            verifyCurrentUser()
         }
     }
     
@@ -117,22 +119,27 @@ class AuthService: ObservableObject {
         }
     
     // MARK: - Сброс пароля
-    // Firebase отправит письмо на email со ссылкой для сброса
-    func resetPassword(email: String) {
-        isLoading = true
-        errorMessage = nil
-        
-        Auth.auth().sendPasswordReset(withEmail: email) { [weak self] error in
-            DispatchQueue.main.async {
-                self?.isLoading = false
-                if let error = error {
-                    self?.errorMessage = self?.russianError(error)
-                } else {
-                    self?.errorMessage = "Письмо для сброса пароля отправлено на \(email)"
+        // Отправляем общее сообщение, не раскрывая существует ли email в базе
+        func resetPassword(email: String) {
+            isLoading = true
+            errorMessage = nil
+            
+            Auth.auth().sendPasswordReset(withEmail: email) { [weak self] error in
+                DispatchQueue.main.async {
+                    self?.isLoading = false
+                    
+                    // Безопасное сообщение: не раскрываем существует ли аккаунт
+                    // Это защищает от атак перебора email-адресов
+                    if let error = error, (error as NSError).code == 17008 {
+                        // Только если email совсем некорректный (неверный формат)
+                        self?.errorMessage = "Неверный формат email"
+                    } else {
+                        // Во всех остальных случаях — общее сообщение
+                        self?.errorMessage = "Если аккаунт существует, письмо отправлено на \(email)"
+                    }
                 }
             }
         }
-    }
     
     // MARK: - Перевод ошибок Firebase на русский
     // Firebase возвращает ошибки на английском — мы переводим их
@@ -162,4 +169,20 @@ class AuthService: ObservableObject {
                return "Произошла ошибка. Попробуйте ещё раз"
            }
        }
+    
+    // MARK: - Проверка что пользователь ещё существует в базе
+        // Вызывается при запуске приложения — если аккаунт удалён в FB,
+        // автоматически разлогиниваем пользователя
+        func verifyCurrentUser() {
+            guard let userId = currentUserId else { return }
+            
+            db.collection("users").document(userId).getDocument { [weak self] doc, error in
+                DispatchQueue.main.async {
+                    // Если документа пользователя нет в Firestore — значит аккаунт удалён
+                    if doc?.exists == false {
+                        self?.logout()
+                    }
+                }
+            }
+        }
 }

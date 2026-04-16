@@ -5,7 +5,6 @@ struct ContentView: View {
     @State private var showRegister = false
     
     var body: some View {
-        // Следим за изменением isLoggedIn
         Group {
             if authService.isLoggedIn {
                 MainTabView(authService: authService)
@@ -15,11 +14,14 @@ struct ContentView: View {
                 LoginView(showRegister: $showRegister, authService: authService)
             }
         }
-        // Когда пользователь выходит — сбрасываем на экран входа
         .onChange(of: authService.isLoggedIn) { _, newValue in
             if !newValue {
                 showRegister = false
             }
+        }
+        // При запуске и возвращении в приложение — проверяем валидность аккаунта
+        .onAppear {
+            authService.verifyCurrentUser()
         }
     }
 }
