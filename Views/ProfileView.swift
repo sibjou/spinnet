@@ -10,6 +10,7 @@ struct ProfileView: View {
     @StateObject private var sparringService = SparringService()
     @StateObject private var tournamentService = TournamentService()
     
+    @State private var editingRequestId: String? = nil
     @State private var userData: [String: Any] = [:]
     @State private var isLoadingProfile = true
     @State private var selectedTab = 0  // 0 = Мои игры, 1 = Участие, 2 = Мои турниры
@@ -55,7 +56,22 @@ struct ProfileView: View {
             .sheet(isPresented: $showSettings) {
                 SettingsView(authService: authService)
             }
+            .sheet(item: Binding(
+                get: { editingRequestId.map { IdentifiableString(id: $0) } },
+                set: { editingRequestId = $0?.id }
+            )) { wrapper in
+                EditRequestView(
+                    requestId: wrapper.id,
+                    isPresented: Binding(
+                        get: { editingRequestId != nil },
+                        set: { if !$0 { editingRequestId = nil } }
+                    ),
+                    onUpdate: { loadAllData() }
+                )
+            }
             .onAppear { loadAllData() }
+           
+            
         }
     }
     
@@ -114,13 +130,13 @@ struct ProfileView: View {
     // MARK: - Переключатель вкладок (три кнопки в ряд)
     private var tabSelector: some View {
         HStack(spacing: 0) {
-            tabButton(title: "Мои игры", icon: "sportscourt", index: 0)
-            tabButton(title: "Турниры", icon: "trophy", index: 1)
-            tabButton(title: "Созданные", icon: "crown", index: 2)
+            tabButton(title: "Спарринги", icon: "sportscourt", index: 0)
+            tabButton(title: "Участвую", icon: "trophy", index: 1)
+            tabButton(title: "Организую", icon: "crown", index: 2)
         }
         .padding(.horizontal)
     }
-    
+
     // Одна кнопка вкладки
     private func tabButton(title: String, icon: String, index: Int) -> some View {
         Button(action: { selectedTab = index }) {
@@ -278,39 +294,50 @@ struct ProfileView: View {
     
     // MARK: - Компонент: карточка игры
     private func gameCard(_ game: [String: Any], status: String) -> some View {
-        VStack(alignment: .leading, spacing: 6) {
-            HStack {
-                // Место
-                Label(game["location"] as? String ?? "", systemImage: "mappin.circle.fill")
-                    .font(.subheadline)
+        Button(action: {
+            // Редактирование доступно только для активных своих заявок
+            if status == "active", let docId = game["documentId"] as? String {
+                editingRequestId = docId
+            }
+        }) {
+            VStack(alignment: .leading, spacing: 6) {
+                HStack {
+                    Label(game["location"] as? String ?? "", systemImage: "mappin.circle.fill")
+                        .font(.subheadline)
+                    
+                    Spacer()
+                    
+                    Text(statusText(status))
+                        .font(.caption)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 2)
+                        .background(statusColor(status).opacity(0.15))
+                        .foregroundColor(statusColor(status))
+                        .cornerRadius(4)
+                }
                 
-                Spacer()
-                
-                // Статус
-                Text(statusText(status))
+                Label(game["timeSlot"] as? String ?? "", systemImage: "clock")
                     .font(.caption)
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 2)
-                    .background(statusColor(status).opacity(0.15))
-                    .foregroundColor(statusColor(status))
-                    .cornerRadius(4)
-            }
-            
-            // Время
-            Label(game["timeSlot"] as? String ?? "", systemImage: "clock")
-                .font(.caption)
-                .foregroundColor(.secondary)
-            
-            // Роль (автор или партнёр)
-            if let role = game["myRole"] as? String {
-                Text("Вы: \(role)")
-                    .font(.caption2)
                     .foregroundColor(.secondary)
+                
+                if let role = game["myRole"] as? String {
+                    Text("Вы: \(role)")
+                        .font(.caption2)
+                        .foregroundColor(.secondary)
+                }
+                
+                // Подсказка что можно редактировать
+                if status == "active" {
+                    Text("Нажмите чтобы изменить")
+                        .font(.caption2)
+                        .foregroundColor(.green)
+                }
             }
+            .padding()
+            .background(Color(.systemGray6))
+            .cornerRadius(10)
         }
-        .padding()
-        .background(Color(.systemGray6))
-        .cornerRadius(10)
+        .foregroundColor(.primary)
     }
     
     // MARK: - Компонент: карточка турнира
@@ -380,5 +407,11 @@ struct ProfileView: View {
         // Загрузка игр и турниров
         sparringService.loadAll(userId: userId)
         tournamentService.loadTournaments()
+    }
+    
+    // Вспомогательная структура для sheet(item:)
+    // Нужна чтобы передавать String как Identifiable
+    struct IdentifiableString: Identifiable {
+        let id: String
     }
 }

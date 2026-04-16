@@ -65,18 +65,23 @@ struct FeedView: View {
         let db = Firestore.firestore()
         
         db.collection("sparring_requests")
-            .whereField("status", isEqualTo: "active")        // Только активные заявки
-            .order(by: "createdAt", descending: true)          // Новые сверху
+            .whereField("status", isEqualTo: "active")
+            .order(by: "createdAt", descending: true)
             .getDocuments { snapshot, error in
                 DispatchQueue.main.async {
                     isLoading = false
                     guard let documents = snapshot?.documents else { return }
                     
-                    // Преобразуем документы Firestore в массив словарей
-                    var loadedRequests: [[String: Any]] = documents.map { doc in
-                        var data = doc.data()
-                        data["documentId"] = doc.documentID  // Сохраняем ID документа для бронирования
-                        return data
+                    // Фильтрую: свои заявки не показываю
+                    var loadedRequests: [[String: Any]] = documents.compactMap { doc in
+                        let data = doc.data()
+                        // Если это моя заявка — пропускаю
+                        if data["userId"] as? String == authService.currentUserId {
+                            return nil
+                        }
+                        var result = data
+                        result["documentId"] = doc.documentID
+                        return result
                     }
                     
                     // Для каждой заявки сразу подгружаем имя автора
