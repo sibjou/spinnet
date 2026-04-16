@@ -221,6 +221,7 @@ struct ProfileView: View {
                     Text("Вы не записаны на турниры")
                         .foregroundColor(.secondary)
                 }
+
                 .frame(maxWidth: .infinity)
                 .padding(.top, 40)
             } else {
