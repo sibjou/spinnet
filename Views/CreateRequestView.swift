@@ -7,7 +7,6 @@ import FirebaseAuth
 struct CreateRequestView: View {
     @ObservedObject var authService: AuthService
     
-    // Дата — минимум завтра (нельзя создать заявку в прошлом)
     @State private var date = Calendar.current.date(byAdding: .day, value: 1, to: Date()) ?? Date()
     @State private var location = ""
     @State private var startTime = Calendar.current.date(from: DateComponents(hour: 18, minute: 0)) ?? Date()
@@ -16,40 +15,51 @@ struct CreateRequestView: View {
     @State private var showSuccess = false
     @State private var isLoading = false
     
+    // Состояния для показа пикеров времени (по одному за раз)
+    @State private var showStartPicker = false
+    @State private var showEndPicker = false
+    
     let levels = ["Начинающий", "Любитель", "Продвинутый", "Профессионал", "Любой"]
     
-    // Минимальная дата — завтра (чтобы нельзя было создать в прошлом)
     var minimumDate: Date {
         Calendar.current.startOfDay(for: Date())
     }
     
     // Форматирование времени для отображения
-    var timeString: String {
+    private func formatTime(_ date: Date) -> String {
         let formatter = DateFormatter()
         formatter.dateFormat = "HH:mm"
-        let start = formatter.string(from: startTime)
-        let end = formatter.string(from: endTime)
-        return "\(start) – \(end)"
+        return formatter.string(from: date)
     }
     
     var body: some View {
         NavigationStack {
             Form {
                 Section("Когда") {
-                    // Выбор даты — только начиная с сегодня
                     DatePicker("Дата",
                                selection: $date,
-                               in: minimumDate...,  // ← Исправление бага 3: только будущие даты
+                               in: minimumDate...,
                                displayedComponents: .date)
                     
-                    // Выбор времени начала и конца
-                    DatePicker("Начало",
-                               selection: $startTime,
-                               displayedComponents: .hourAndMinute)
+                    // Начало — открывается как отдельный экран
+                    HStack {
+                        Text("Начало")
+                        Spacer()
+                        Button(formatTime(startTime)) {
+                            showStartPicker = true
+                        }
+                        .foregroundColor(.green)
+                    }
                     
-                    DatePicker("Конец",
-                               selection: $endTime,
-                               displayedComponents: .hourAndMinute)
+                    // Конец — открывается как отдельный экран
+                    HStack {
+                        Text("Конец")
+                        Spacer()
+                        Button(formatTime(endTime)) {
+                            showEndPicker = true
+                        }
+                        .foregroundColor(.green)
+                    }
                 }
                 
                 Section("Где") {
@@ -78,6 +88,14 @@ struct CreateRequestView: View {
                 }
             }
             .navigationTitle("Новая заявка")
+            // Модальное окно для выбора начала
+            .sheet(isPresented: $showStartPicker) {
+                TimePickerSheet(title: "Начало", time: $startTime, isPresented: $showStartPicker)
+            }
+            // Модальное окно для выбора конца
+            .sheet(isPresented: $showEndPicker) {
+                TimePickerSheet(title: "Конец", time: $endTime, isPresented: $showEndPicker)
+            }
             .alert("Заявка опубликована!", isPresented: $showSuccess) {
                 Button("OK") {
                     location = ""
@@ -94,16 +112,12 @@ struct CreateRequestView: View {
         isLoading = true
         
         let db = Firestore.firestore()
-        
-        // Форматируем время для хранения
-        let formatter = DateFormatter()
-        formatter.dateFormat = "HH:mm"
-        let timeSlot = "\(formatter.string(from: startTime)) – \(formatter.string(from: endTime))"
+        let timeSlot = "\(formatTime(startTime)) – \(formatTime(endTime))"
         
         let data: [String: Any] = [
             "userId": userId,
-            "date": Timestamp(date: date),          // Дата игры
-            "timeSlot": timeSlot,                   // Время в формате "18:00 – 20:00"
+            "date": Timestamp(date: date),
+            "timeSlot": timeSlot,
             "location": location,
             "desiredLevel": desiredLevel,
             "status": "active",
@@ -118,5 +132,37 @@ struct CreateRequestView: View {
                 }
             }
         }
+    }
+}
+
+// MARK: - TimePickerSheet
+// Отдельный экран-модалка для выбора времени
+// Вынесен отдельно, чтобы избежать конфликтов DatePicker в Form
+struct TimePickerSheet: View {
+    let title: String
+    @Binding var time: Date
+    @Binding var isPresented: Bool
+    
+    var body: some View {
+        NavigationStack {
+            VStack {
+                DatePicker("",
+                           selection: $time,
+                           displayedComponents: .hourAndMinute)
+                    .datePickerStyle(.wheel)
+                    .labelsHidden()
+                    .padding()
+                Spacer()
+            }
+            .navigationTitle(title)
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("Готово") { isPresented = false }
+                        .fontWeight(.semibold)
+                }
+            }
+        }
+        .presentationDetents([.height(300)])  // Высота модалки
     }
 }
