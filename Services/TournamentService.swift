@@ -15,30 +15,62 @@ class TournamentService: ObservableObject {
     private let db = Firestore.firestore()
     
     // MARK: - Создание турнира
-    // Организатор заполняет форму → данные сохраняются в Firestore
-    func createTournament(title: String, date: Date, location: String,
-                          description: String, maxParticipants: Int,
-                          organizerId: String, completion: @escaping (Bool) -> Void) {
-        
-        let data: [String: Any] = [
-            "title": title,
-            "date": Timestamp(date: date),
-            "location": location,
-            "description": description,
-            "maxParticipants": maxParticipants,
-            "organizerId": organizerId,
-            "participants": [String](),           // Пустой массив — пока никто не записался
-            "confirmedParticipants": [String](),  // Кто реально пришёл (заполняет организатор)
-            "status": "upcoming",                 // upcoming → completed / cancelled
-            "createdAt": Timestamp()
-        ]
-        
-        db.collection("tournaments").addDocument(data: data) { error in
-            DispatchQueue.main.async {
-                completion(error == nil)
+        func createTournament(title: String, date: Date, startTime: String,
+                              location: String, description: String,
+                              maxParticipants: Int, organizerId: String,
+                              completion: @escaping (Bool) -> Void) {
+            
+            let data: [String: Any] = [
+                "title": title,
+                "date": Timestamp(date: date),
+                "startTime": startTime,               
+                "location": location,
+                "description": description,
+                "maxParticipants": maxParticipants,
+                "organizerId": organizerId,
+                "participants": [String](),
+                "confirmedParticipants": [String](),
+                "status": "upcoming",
+                "createdAt": Timestamp()
+            ]
+            
+            db.collection("tournaments").addDocument(data: data) { error in
+                DispatchQueue.main.async {
+                    completion(error == nil)
+                }
             }
         }
-    }
+        
+        // MARK: - Обновление турнира (редактирование организатором)
+        func updateTournament(tournamentId: String, title: String, date: Date,
+                              startTime: String, location: String,
+                              description: String, maxParticipants: Int,
+                              completion: @escaping (Bool) -> Void) {
+            
+            let updateData: [String: Any] = [
+                "title": title,
+                "date": Timestamp(date: date),
+                "startTime": startTime,
+                "location": location,
+                "description": description,
+                "maxParticipants": maxParticipants
+            ]
+            
+            db.collection("tournaments").document(tournamentId).updateData(updateData) { error in
+                DispatchQueue.main.async {
+                    completion(error == nil)
+                }
+            }
+        }
+        
+        // MARK: - Удаление турнира
+        func deleteTournament(tournamentId: String, completion: @escaping (Bool) -> Void) {
+            db.collection("tournaments").document(tournamentId).delete { error in
+                DispatchQueue.main.async {
+                    completion(error == nil)
+                }
+            }
+        }
     
     // MARK: - Загрузка турниров
     // Показываю индикатор загрузки только если турниров ещё нет

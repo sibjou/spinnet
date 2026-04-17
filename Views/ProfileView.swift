@@ -11,6 +11,8 @@ struct ProfileView: View {
     @StateObject private var tournamentService = TournamentService()
     
     @State private var editingRequestId: String? = nil
+    @State private var bookedGameId: String? = nil
+    @State private var bookedGameData: [String: Any] = [:]
     @State private var userData: [String: Any] = [:]
     @State private var isLoadingProfile = true
     @State private var selectedTab = 0  // 0 = Мои игры, 1 = Участие, 2 = Мои турниры
@@ -67,6 +69,20 @@ struct ProfileView: View {
                         set: { if !$0 { editingRequestId = nil } }
                     ),
                     onUpdate: { loadAllData() }
+                )
+            }
+            .sheet(item: Binding(
+                get: { bookedGameId.map { IdentifiableString(id: $0) } },
+                set: { bookedGameId = $0?.id }
+            )) { _ in
+                BookedGameDetailView(
+                    game: bookedGameData,
+                    authService: authService,
+                    sparringService: sparringService,
+                    isPresented: Binding(
+                        get: { bookedGameId != nil },
+                        set: { if !$0 { bookedGameId = nil } }
+                    )
                 )
             }
             .onAppear { loadAllData() }
@@ -295,10 +311,15 @@ struct ProfileView: View {
     // MARK: - Компонент: карточка игры
     private func gameCard(_ game: [String: Any], status: String) -> some View {
         Button(action: {
-            // Редактирование доступно только для активных своих заявок
             if status == "active", let docId = game["documentId"] as? String {
+                // Активная заявка — открываю редактирование
                 editingRequestId = docId
+            } else if status == "booked" {
+                // Забронированная — открываю детали встречи
+                bookedGameData = game
+                bookedGameId = game["documentId"] as? String
             }
+            // Завершённые игры пока не открываются (история)
         }) {
             VStack(alignment: .leading, spacing: 6) {
                 HStack {
@@ -326,11 +347,15 @@ struct ProfileView: View {
                         .foregroundColor(.secondary)
                 }
                 
-                // Подсказка что можно редактировать
+                // Подсказка действия
                 if status == "active" {
                     Text("Нажмите чтобы изменить")
                         .font(.caption2)
                         .foregroundColor(.green)
+                } else if status == "booked" {
+                    Text("Нажмите для деталей")
+                        .font(.caption2)
+                        .foregroundColor(.blue)
                 }
             }
             .padding()

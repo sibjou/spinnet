@@ -14,6 +14,8 @@
 		CB55087C2F8E703F00898F2B /* SparringService.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB55087B2F8E703800898F2B /* SparringService.swift */; };
 		CB55087E2F8E708000898F2B /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB55087D2F8E707700898F2B /* SettingsView.swift */; };
 		CB55089A2F9115AE00898F2B /* EditRequestView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB5508992F9115A400898F2B /* EditRequestView.swift */; };
+		CB55089C2F9150A600898F2B /* BookedGameDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB55089B2F91509400898F2B /* BookedGameDetailView.swift */; };
+		CB55089E2F9256BC00898F2B /* EditTournamentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB55089D2F9256B900898F2B /* EditTournamentView.swift */; };
 		CB6664C32F8AA40900DB34E9 /* FeedView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB6664C12F8AA3FA00DB34E9 /* FeedView.swift */; };
 		CB6664C72F8AA42700DB34E9 /* RequestCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB6664C62F8AA42700DB34E9 /* RequestCardView.swift */; };
 		CBD58DC52F8A6B7A00E92606 /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = CBD58DC42F8A6B7A00E92606 /* GoogleService-Info.plist */; };
@@ -37,6 +39,8 @@
 		CB55087B2F8E703800898F2B /* SparringService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SparringService.swift; sourceTree = "<group>"; };
 		CB55087D2F8E707700898F2B /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		CB5508992F9115A400898F2B /* EditRequestView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditRequestView.swift; sourceTree = "<group>"; };
+		CB55089B2F91509400898F2B /* BookedGameDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BookedGameDetailView.swift; sourceTree = "<group>"; };
+		CB55089D2F9256B900898F2B /* EditTournamentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditTournamentView.swift; sourceTree = "<group>"; };
 		CB6664C12F8AA3FA00DB34E9 /* FeedView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FeedView.swift; sourceTree = "<group>"; };
 		CB6664C62F8AA42700DB34E9 /* RequestCardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RequestCardView.swift; sourceTree = "<group>"; };
 		CBD58DB62F8A60A500E92606 /* Spinnet.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Spinnet.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -123,6 +127,8 @@
 		CBD58DE22F8A8EE800E92606 /* Views */ = {
 			isa = PBXGroup;
 			children = (
+				CB55089D2F9256B900898F2B /* EditTournamentView.swift */,
+				CB55089B2F91509400898F2B /* BookedGameDetailView.swift */,
 				CB5508992F9115A400898F2B /* EditRequestView.swift */,
 				CB55087D2F8E707700898F2B /* SettingsView.swift */,
 				CB3849A82F8D4C3F004CFA10 /* CreateTournamentView.swift */,
@@ -225,11 +231,13 @@
 			buildActionMask = 2147483647;
 			files = (
 				CBD58DC82F8A70CD00E92606 /* AuthService.swift in Sources */,
+				CB55089C2F9150A600898F2B /* BookedGameDetailView.swift in Sources */,
 				CB6664C32F8AA40900DB34E9 /* FeedView.swift in Sources */,
 				CBD58DD62F8A71EB00E92606 /* ProfileView.swift in Sources */,
 				CBD58DD22F8A71B700E92606 /* CreateRequestView.swift in Sources */,
 				CB3849AB2F8D4C68004CFA10 /* TournamentDetailView.swift in Sources */,
 				CB55087C2F8E703F00898F2B /* SparringService.swift in Sources */,
+				CB55089E2F9256BC00898F2B /* EditTournamentView.swift in Sources */,
 				CBD58DCA2F8A710300E92606 /* ContentView.swift in Sources */,
 				CB6664C72F8AA42700DB34E9 /* RequestCardView.swift in Sources */,
 				CB55087E2F8E708000898F2B /* SettingsView.swift in Sources */,

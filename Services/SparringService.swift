@@ -146,4 +146,21 @@ class SparringService: ObservableObject {
             self?.isLoading = false
         }
     }
+    
+    // MARK: - Отмена бронирования
+    // Когда один из участников отменяет — заявка возвращается в ленту
+    // со статусом "active", bookedBy удаляется
+    func cancelBooking(requestId: String, completion: @escaping (Bool) -> Void) {
+        let updateData: [String: Any] = [
+            "status": "active",
+            "bookedBy": FieldValue.delete(),     // Удаляю поле кто забронировал
+            "bookedAt": FieldValue.delete()      // Удаляю время бронирования
+        ]
+        
+        db.collection("sparring_requests").document(requestId).updateData(updateData) { error in
+            DispatchQueue.main.async {
+                completion(error == nil)
+            }
+        }
+    }
 }

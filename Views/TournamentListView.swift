@@ -118,6 +118,13 @@ struct TournamentCardView: View {
             Label(formattedDate, systemImage: "calendar")
                 .font(.subheadline)
             
+            // Время начала
+            if let startTime = tournament["startTime"] as? String, !startTime.isEmpty {
+                Label("в \(startTime)", systemImage: "clock")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
+            
             Label(tournament["location"] as? String ?? "", systemImage: "mappin.circle.fill")
                 .font(.subheadline)
             

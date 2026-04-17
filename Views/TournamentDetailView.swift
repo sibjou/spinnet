@@ -11,6 +11,7 @@ struct TournamentDetailView: View {
     @ObservedObject var authService: AuthService
     @ObservedObject var tournamentService: TournamentService
     
+    @State private var showEdit = false
     @State private var showAlert = false
     @State private var alertMessage = ""
     @State private var participantNames: [(id: String, name: String)] = []
@@ -69,6 +70,12 @@ struct TournamentDetailView: View {
             // Информация о турнире
             Section("Информация") {
                 Label(formattedDate, systemImage: "calendar")
+                
+                // Время начала (если задано)
+                if let startTime = tournament["startTime"] as? String, !startTime.isEmpty {
+                    Label("Начало в \(startTime)", systemImage: "clock")
+                }
+                
                 Label(tournament["location"] as? String ?? "", systemImage: "mappin.circle.fill")
                 Label("Организатор: \(tournament["organizerName"] as? String ?? "")",
                       systemImage: "person.badge.shield.checkmark")
@@ -148,8 +155,13 @@ struct TournamentDetailView: View {
             }
             
             // Завершение турнира (только организатор)
+            // Кнопки для организатора
             if isOrganizer {
                 Section {
+                    Button(action: { showEdit = true }) {
+                        Label("Редактировать турнир", systemImage: "pencil")
+                    }
+                    
                     Button("Завершить турнир", role: .destructive) {
                         completeAction()
                     }
@@ -159,6 +171,17 @@ struct TournamentDetailView: View {
         }
         .navigationTitle(tournament["title"] as? String ?? "Турнир")
         .onAppear { loadParticipantNames() }
+        .sheet(isPresented: $showEdit) {
+            EditTournamentView(
+                tournamentId: tournament["documentId"] as? String ?? "",
+                tournamentService: tournamentService,
+                isPresented: $showEdit,
+                onUpdate: {
+                    // После редактирования — перезагружаем данные турнира
+                    reloadTournament()
+                }
+            )
+        }
         .alert("Турнир", isPresented: $showAlert) {
             Button("OK") {}
         } message: {
