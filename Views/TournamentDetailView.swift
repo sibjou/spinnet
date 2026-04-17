@@ -12,6 +12,9 @@ struct TournamentDetailView: View {
     @ObservedObject var tournamentService: TournamentService
     
     @State private var showEdit = false
+    @State private var showRemoveConfirm = false
+    @State private var removeParticipantId = ""
+    @State private var removeParticipantName = ""
     @State private var showAlert = false
     @State private var alertMessage = ""
     @State private var participantNames: [(id: String, name: String)] = []
@@ -128,28 +131,69 @@ struct TournamentDetailView: View {
                         .foregroundColor(.secondary)
                 } else {
                     ForEach(participantNames, id: \.id) { participant in
-                        HStack {
-                            Image(systemName: "person.circle.fill")
-                                .foregroundColor(.green)
-                            Text(participant.name)
-                            
-                            Spacer()
-                            
-                            // Организатор видит кнопки подтверждения
-                            if isOrganizer {
+                        VStack(alignment: .leading, spacing: 8) {
+                            // Имя участника
+                            HStack {
+                                Image(systemName: "person.circle.fill")
+                                    .foregroundColor(.green)
+                                Text(participant.name)
+                                
+                                Spacer()
+                                
+                                // Статус подтверждения
                                 if confirmedParticipants.contains(participant.id) {
-                                    Image(systemName: "checkmark.circle.fill")
-                                        .foregroundColor(.green)
-                                } else {
-                                    Button("Подтвердить") {
-                                        confirmAction(userId: participant.id)
+                                    HStack(spacing: 4) {
+                                        Image(systemName: "checkmark.circle.fill")
+                                            .foregroundColor(.green)
+                                        Text("Подтверждён")
+                                            .font(.caption)
+                                            .foregroundColor(.green)
                                     }
-                                    .buttonStyle(.bordered)
-                                    .font(.caption)
+                                }
+                            }
+                            
+                            // Кнопки управления (только организатор)
+                            if isOrganizer {
+                                HStack(spacing: 12) {
+                                    if confirmedParticipants.contains(participant.id) {
+                                        Button(action: {
+                                            unconfirmAction(userId: participant.id)
+                                        }) {
+                                            Label("Отменить", systemImage: "arrow.uturn.backward")
+                                                .font(.caption)
+                                        }
+                                        .buttonStyle(.borderless)
+                                        .foregroundColor(.orange)
+                                        .disabled(isProcessing)
+                                    } else {
+                                        Button(action: {
+                                            confirmAction(userId: participant.id)
+                                        }) {
+                                            Label("Подтвердить", systemImage: "checkmark")
+                                                .font(.caption)
+                                        }
+                                        .buttonStyle(.borderless)
+                                        .foregroundColor(.green)
+                                        .disabled(isProcessing)
+                                    }
+                                    
+                                    Spacer()
+                                    
+                                    Button(action: {
+                                        removeParticipantId = participant.id
+                                        removeParticipantName = participant.name
+                                        showRemoveConfirm = true
+                                    }) {
+                                        Label("Удалить", systemImage: "xmark")
+                                            .font(.caption)
+                                    }
+                                    .buttonStyle(.borderless)
+                                    .foregroundColor(.red)
                                     .disabled(isProcessing)
                                 }
                             }
                         }
+                        .padding(.vertical, 4)
                     }
                 }
             }
@@ -182,12 +226,54 @@ struct TournamentDetailView: View {
                 }
             )
         }
+        
+        .alert("Удалить участника?", isPresented: $showRemoveConfirm) {
+            Button("Отмена", role: .cancel) {}
+            Button("Удалить", role: .destructive) {
+                removeAction(userId: removeParticipantId)
+            }
+        } message: {
+            Text("Удалить \(removeParticipantName) из турнира?")
+        }
+        
         .alert("Турнир", isPresented: $showAlert) {
             Button("OK") {}
         } message: {
             Text(alertMessage)
         }
     }
+    
+    // MARK: - Отменить подтверждение
+        private func unconfirmAction(userId: String) {
+            guard let docId = tournament["documentId"] as? String else { return }
+            isProcessing = true
+            
+            tournamentService.unconfirmParticipant(tournamentId: docId, userId: userId) { success in
+                if success {
+                    alertMessage = "Подтверждение отменено"
+                    showAlert = true
+                    reloadTournament()
+                } else {
+                    isProcessing = false
+                }
+            }
+        }
+        
+        // MARK: - Удалить участника
+        private func removeAction(userId: String) {
+            guard let docId = tournament["documentId"] as? String else { return }
+            isProcessing = true
+            
+            tournamentService.removeParticipant(tournamentId: docId, userId: userId) { success in
+                if success {
+                    alertMessage = "Участник удалён из турнира"
+                    showAlert = true
+                    reloadTournament()
+                } else {
+                    isProcessing = false
+                }
+            }
+        }
     
     // MARK: - Загружаю имена участников из базы
     private func loadParticipantNames() {

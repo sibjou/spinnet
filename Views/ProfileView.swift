@@ -10,12 +10,15 @@ struct ProfileView: View {
     @StateObject private var sparringService = SparringService()
     @StateObject private var tournamentService = TournamentService()
     
+    
     @State private var editingRequestId: String? = nil
     @State private var bookedGameId: String? = nil
     @State private var bookedGameData: [String: Any] = [:]
     @State private var userData: [String: Any] = [:]
     @State private var isLoadingProfile = true
     @State private var selectedTab = 0  // 0 = Мои игры, 1 = Участие, 2 = Мои турниры
+    @State private var completedParticipationTournaments: [[String: Any]] = []
+    @State private var completedCreatedTournaments: [[String: Any]] = []
     @State private var showSettings = false
     
     var body: some View {
@@ -236,43 +239,71 @@ struct ProfileView: View {
         .padding(.horizontal)
     }
     
-    // MARK: - Вкладка "Участие в турнирах"
-    private var myTournamentsParticipationTab: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            let myTournaments = tournamentService.tournaments.filter { tournament in
-                guard let participants = tournament["participants"] as? [String],
-                      let userId = authService.currentUserId else { return false }
-                return participants.contains(userId)
-            }
-            
-            if myTournaments.isEmpty {
-                VStack(spacing: 8) {
-                    Image(systemName: "trophy")
-                        .font(.system(size: 40))
-                        .foregroundColor(.gray)
-                    Text("Вы не записаны на турниры")
-                        .foregroundColor(.secondary)
-                }
 
-                .frame(maxWidth: .infinity)
-                .padding(.top, 40)
-            } else {
-                ForEach(myTournaments.indices, id: \.self) { index in
-                    tournamentCard(myTournaments[index])
+    // MARK: - Вкладка "Участвую"
+        private var myTournamentsParticipationTab: some View {
+            VStack(alignment: .leading, spacing: 12) {
+                let myTournaments = tournamentService.tournaments.filter { tournament in
+                    guard let participants = tournament["participants"] as? [String],
+                          let userId = authService.currentUserId else { return false }
+                    return participants.contains(userId)
+                }
+                
+                // Загружаем также завершённые турниры где я участвовал
+                let allMyTournaments = getAllMyParticipationTournaments()
+                
+                if myTournaments.isEmpty && allMyTournaments.isEmpty {
+                    VStack(spacing: 8) {
+                        Image(systemName: "trophy")
+                            .font(.system(size: 40))
+                            .foregroundColor(.gray)
+                        Text("Вы не записаны на турниры")
+                            .foregroundColor(.secondary)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.top, 40)
+                } else {
+                    // Предстоящие турниры
+                    if !myTournaments.isEmpty {
+                        sectionHeader("Предстоящие", color: .green)
+                        ForEach(myTournaments.indices, id: \.self) { index in
+                            NavigationLink {
+                                TournamentDetailView(
+                                    tournament: myTournaments[index],
+                                    authService: authService,
+                                    tournamentService: tournamentService
+                                )
+                            } label: {
+                                tournamentCard(myTournaments[index])
+                            }
+                            .foregroundColor(.primary)
+                        }
+                    }
+                    
+                    // Завершённые турниры
+                    if !allMyTournaments.isEmpty {
+                        sectionHeader("Завершённые", color: .gray)
+                        ForEach(allMyTournaments.indices, id: \.self) { index in
+                            tournamentCard(allMyTournaments[index])
+                        }
+                    }
                 }
             }
+            .padding(.horizontal)
         }
-        .padding(.horizontal)
-    }
     
-    // MARK: - Вкладка "Мои созданные турниры"
+    // MARK: - Вкладка "Организую"
     private var myCreatedTournamentsTab: some View {
         VStack(alignment: .leading, spacing: 12) {
-            let createdTournaments = tournamentService.tournaments.filter { tournament in
+            // Мои активные турниры (upcoming)
+            let activeTournaments = tournamentService.tournaments.filter { tournament in
                 tournament["organizerId"] as? String == authService.currentUserId
             }
             
-            if createdTournaments.isEmpty {
+            // Мои завершённые турниры
+            let completedTournaments = getAllMyCreatedCompletedTournaments()
+            
+            if activeTournaments.isEmpty && completedTournaments.isEmpty {
                 VStack(spacing: 8) {
                     Image(systemName: "crown")
                         .font(.system(size: 40))
@@ -283,17 +314,29 @@ struct ProfileView: View {
                 .frame(maxWidth: .infinity)
                 .padding(.top, 40)
             } else {
-                ForEach(createdTournaments.indices, id: \.self) { index in
-                    NavigationLink {
-                        TournamentDetailView(
-                            tournament: createdTournaments[index],
-                            authService: authService,
-                            tournamentService: tournamentService
-                        )
-                    } label: {
-                        tournamentCard(createdTournaments[index])
+                // Активные турниры (предстоящие — вверху)
+                if !activeTournaments.isEmpty {
+                    sectionHeader("Предстоящие", color: .green)
+                    ForEach(activeTournaments.indices, id: \.self) { index in
+                        NavigationLink {
+                            TournamentDetailView(
+                                tournament: activeTournaments[index],
+                                authService: authService,
+                                tournamentService: tournamentService
+                            )
+                        } label: {
+                            tournamentCard(activeTournaments[index])
+                        }
+                        .foregroundColor(.primary)
                     }
-                    .foregroundColor(.primary)
+                }
+                
+                // Завершённые
+                if !completedTournaments.isEmpty {
+                    sectionHeader("Завершённые", color: .gray)
+                    ForEach(completedTournaments.indices, id: \.self) { index in
+                        tournamentCard(completedTournaments[index])
+                    }
                 }
             }
         }
@@ -417,6 +460,19 @@ struct ProfileView: View {
         }
     }
     
+    // MARK: - Загрузка завершённых турниров где я участвовал
+    private func getAllMyParticipationTournaments() -> [[String: Any]] {
+        // Пока возвращаем пустой массив
+        // Завершённые турниры загружаются отдельным запросом
+        // который добавим в TournamentService позже
+        return completedParticipationTournaments
+    }
+        
+        // MARK: - Загрузка завершённых турниров которые я создал
+        private func getAllMyCreatedCompletedTournaments() -> [[String: Any]] {
+            return completedCreatedTournaments
+        }
+    
     // MARK: - Загрузка всех данных профиля
     private func loadAllData() {
         guard let userId = authService.currentUserId else { return }
@@ -429,9 +485,40 @@ struct ProfileView: View {
             }
         }
         
-        // Загрузка игр и турниров
+        // Загрузка игр
         sparringService.loadAll(userId: userId)
+        
+        // Загрузка активных турниров
         tournamentService.loadTournaments()
+        
+        // Загрузка завершённых турниров где я участвовал
+        let db = Firestore.firestore()
+        db.collection("tournaments")
+            .whereField("status", isEqualTo: "completed")
+            .getDocuments { snapshot, _ in
+                DispatchQueue.main.async {
+                    guard let documents = snapshot?.documents else { return }
+                    
+                    // Турниры где я участник
+                    self.completedParticipationTournaments = documents.compactMap { doc in
+                        let data = doc.data()
+                        guard let participants = data["participants"] as? [String],
+                              participants.contains(userId) else { return nil }
+                        var result = data
+                        result["documentId"] = doc.documentID
+                        return result
+                    }
+                    
+                    // Турниры которые я создал
+                    self.completedCreatedTournaments = documents.compactMap { doc in
+                        let data = doc.data()
+                        guard data["organizerId"] as? String == userId else { return nil }
+                        var result = data
+                        result["documentId"] = doc.documentID
+                        return result
+                    }
+                }
+            }
     }
     
     // Вспомогательная структура для sheet(item:)

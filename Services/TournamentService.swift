@@ -154,6 +154,29 @@ class TournamentService: ObservableObject {
         }
     }
     
+    // MARK: - Отменить подтверждение участника
+        func unconfirmParticipant(tournamentId: String, userId: String, completion: @escaping (Bool) -> Void) {
+            db.collection("tournaments").document(tournamentId).updateData([
+                "confirmedParticipants": FieldValue.arrayRemove([userId])
+            ]) { error in
+                DispatchQueue.main.async {
+                    completion(error == nil)
+                }
+            }
+        }
+        
+        // MARK: - Удалить участника из турнира (организатор)
+        func removeParticipant(tournamentId: String, userId: String, completion: @escaping (Bool) -> Void) {
+            db.collection("tournaments").document(tournamentId).updateData([
+                "participants": FieldValue.arrayRemove([userId]),
+                "confirmedParticipants": FieldValue.arrayRemove([userId])
+            ]) { error in
+                DispatchQueue.main.async {
+                    completion(error == nil)
+                }
+            }
+        }
+    
     // MARK: - Завершить турнир
     func completeTournament(tournamentId: String, completion: @escaping (Bool) -> Void) {
         db.collection("tournaments").document(tournamentId).updateData([
