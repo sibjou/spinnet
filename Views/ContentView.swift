@@ -22,6 +22,8 @@ struct ContentView: View {
         // При запуске и возвращении в приложение — проверяем валидность аккаунта
         .onAppear {
             authService.verifyCurrentUser()
+            // Проверяю статусы при каждом запуске
+            StatusManager.shared.checkAllStatuses()
         }
     }
 }

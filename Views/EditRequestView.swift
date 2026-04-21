@@ -90,7 +90,7 @@ struct EditRequestView: View {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button("Сохранить") { saveChanges() }
                         .fontWeight(.semibold)
-                        .disabled(location.isEmpty || isSaving)
+                        .disabled(location.isEmpty || isSaving || endTime <= startTime)
                 }
             }
             .sheet(isPresented: $showStartPicker) {

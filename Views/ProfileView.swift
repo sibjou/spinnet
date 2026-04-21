@@ -205,11 +205,14 @@ struct ProfileView: View {
                 }
             }
             
-            // Забронированные игры (ожидают встречи)
+            // Забронированные игры и идущие
             if !sparringService.myBookedGames.isEmpty {
                 sectionHeader("Предстоящие игры", color: .blue)
                 ForEach(sparringService.myBookedGames.indices, id: \.self) { index in
-                    gameCard(sparringService.myBookedGames[index], status: "booked")
+                    let game = sparringService.myBookedGames[index]
+                    // Беру реальный статус из данных, а не фиксированный
+                    let realStatus = game["status"] as? String ?? "booked"
+                    gameCard(game, status: realStatus)
                 }
             }
             
@@ -364,14 +367,14 @@ struct ProfileView: View {
         Button(action: {
             if status == "active", let docId = game["documentId"] as? String {
                 editingRequestId = docId
-            } else if status == "booked" {
+            } else if status == "booked" || status == "in_progress" || status == "completed" || status == "expired" {
                 bookedGameData = game
                 bookedGameId = game["documentId"] as? String
             }
         }) {
             VStack(alignment: .leading, spacing: 8) {
-                // Сверху — имя партнёра (если есть)
-                if status == "booked", let partnerName = game["partnerName"] as? String {
+                // Имя партнёра (если есть)
+                if let partnerName = game["partnerName"] as? String, !partnerName.isEmpty {
                     HStack {
                         Image(systemName: "person.circle.fill")
                             .foregroundColor(.green)
@@ -421,13 +424,7 @@ struct ProfileView: View {
                     .font(.caption)
                     .foregroundColor(.secondary)
                 
-                if let role = game["myRole"] as? String {
-                    Text("Вы: \(role)")
-                        .font(.caption2)
-                        .foregroundColor(.secondary)
-                }
-                
-                // Подсказка действия
+                // Подсказка
                 if status == "active" {
                     Text("Нажмите чтобы изменить")
                         .font(.caption2)
@@ -436,6 +433,14 @@ struct ProfileView: View {
                     Text("Нажмите для деталей")
                         .font(.caption2)
                         .foregroundColor(.blue)
+                } else if status == "in_progress" {
+                    Text("Игра идёт прямо сейчас — нажмите для деталей")
+                        .font(.caption2)
+                        .foregroundColor(.orange)
+                } else if status == "completed" || status == "expired" {
+                    Text("Нажмите для просмотра")
+                        .font(.caption2)
+                        .foregroundColor(.gray)
                 }
             }
             .padding()
@@ -493,7 +498,9 @@ struct ProfileView: View {
         switch status {
         case "active": return "Активна"
         case "booked": return "Забронирована"
+        case "in_progress": return "Идёт игра"
         case "completed": return "Завершена"
+        case "expired": return "Истекла"
         default: return status
         }
     }
@@ -502,7 +509,9 @@ struct ProfileView: View {
         switch status {
         case "active": return .green
         case "booked": return .blue
+        case "in_progress": return .orange
         case "completed": return .gray
+        case "expired": return .red
         default: return .secondary
         }
     }
@@ -523,6 +532,9 @@ struct ProfileView: View {
     // MARK: - Загрузка всех данных профиля
     private func loadAllData() {
         guard let userId = authService.currentUserId else { return }
+        
+        // Проверяю статусы перед загрузкой данных
+        StatusManager.shared.checkAllStatuses()
         
         // Загрузка данных профиля из Firestore
         Firestore.firestore().collection("users").document(userId).getDocument { doc, _ in

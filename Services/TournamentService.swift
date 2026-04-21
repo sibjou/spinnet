@@ -75,14 +75,15 @@ class TournamentService: ObservableObject {
     // MARK: - Загрузка турниров
     // Показываю индикатор загрузки только если турниров ещё нет
         // Если уже есть — обновляю тихо, без мигания экрана
-        func loadTournaments() {
-            if tournaments.isEmpty {
-                isLoading = true
-            }
+    func loadTournaments() {
+        if tournaments.isEmpty {
+            isLoading = true
+        }
         
+        // Загружаю и upcoming и in_progress турниры
         db.collection("tournaments")
-            .whereField("status", isEqualTo: "upcoming")
-            .order(by: "date", descending: false)  // Ближайшие сверху
+            .whereField("status", in: ["upcoming", "in_progress"])
+            .order(by: "date", descending: false)
             .getDocuments { [weak self] snapshot, error in
                 DispatchQueue.main.async {
                     self?.isLoading = false

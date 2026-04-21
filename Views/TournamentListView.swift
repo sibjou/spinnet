@@ -137,6 +137,18 @@ struct TournamentCardView: View {
                 
                 Spacer()
                 
+                // Статус турнира
+                if let status = tournament["status"] as? String, status == "in_progress" {
+                    Text("Идёт турнир")
+                        .font(.caption)
+                        .fontWeight(.semibold)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 3)
+                        .background(Color.orange.opacity(0.15))
+                        .foregroundColor(.orange)
+                        .cornerRadius(4)
+                }
+                
                 // Индикатор — записан или нет
                 if isJoined {
                     Text("Вы записаны")

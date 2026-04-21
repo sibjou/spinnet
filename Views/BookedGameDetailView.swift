@@ -128,7 +128,8 @@ struct BookedGameDetailView: View {
     
     // MARK: - Загрузка информации о партнёре
     private func loadPartnerInfo() {
-        guard let id = partnerId else {
+        guard let id = partnerId, !id.isEmpty else {
+            partnerName = "Партнёр не найден"
             isLoadingPartner = false
             return
         }
@@ -141,6 +142,8 @@ struct BookedGameDetailView: View {
                     self.partnerName = "\(firstName) \(lastName)"
                     self.partnerSkill = data["skillLevel"] as? String ?? ""
                     self.partnerCity = data["city"] as? String ?? ""
+                } else {
+                    self.partnerName = "Пользователь удалён"
                 }
                 self.isLoadingPartner = false
             }

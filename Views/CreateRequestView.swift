@@ -71,6 +71,14 @@ struct CreateRequestView: View {
                         ForEach(levels, id: \.self) { Text($0) }
                     }
                 }
+                // Предупреждение если время конца раньше начала
+                if endTime <= startTime {
+                    Section {
+                        Label("Время конца должно быть позже начала", systemImage: "exclamationmark.triangle.fill")
+                            .foregroundColor(.red)
+                            .font(.caption)
+                    }
+                }
                 
                 Section {
                     Button(action: createRequest) {
@@ -82,7 +90,7 @@ struct CreateRequestView: View {
                                 .fontWeight(.semibold)
                         }
                     }
-                    .disabled(location.isEmpty || isLoading)
+                    .disabled(location.isEmpty || isLoading || endTime <= startTime)
                     .foregroundColor(.white)
                     .listRowBackground(Color.green)
                 }
