@@ -241,69 +241,70 @@ struct ProfileView: View {
     
 
     // MARK: - Вкладка "Участвую"
-        private var myTournamentsParticipationTab: some View {
-            VStack(alignment: .leading, spacing: 12) {
-                let myTournaments = tournamentService.tournaments.filter { tournament in
-                    guard let participants = tournament["participants"] as? [String],
-                          let userId = authService.currentUserId else { return false }
-                    return participants.contains(userId)
+    private var myTournamentsParticipationTab: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            let myTournaments = tournamentService.tournaments.filter { tournament in
+                guard let participants = tournament["participants"] as? [String],
+                      let userId = authService.currentUserId else { return false }
+                return participants.contains(userId)
+            }
+            
+            if myTournaments.isEmpty && completedParticipationTournaments.isEmpty {
+                VStack(spacing: 8) {
+                    Image(systemName: "trophy")
+                        .font(.system(size: 40))
+                        .foregroundColor(.gray)
+                    Text("Вы не записаны на турниры")
+                        .foregroundColor(.secondary)
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.top, 40)
+            } else {
+                if !myTournaments.isEmpty {
+                    sectionHeader("Предстоящие", color: .green)
+                    ForEach(myTournaments.indices, id: \.self) { index in
+                        NavigationLink {
+                            TournamentDetailView(
+                                tournament: myTournaments[index],
+                                authService: authService,
+                                tournamentService: tournamentService
+                            )
+                        } label: {
+                            tournamentCard(myTournaments[index])
+                        }
+                        .foregroundColor(.primary)
+                    }
                 }
                 
-                // Загружаем также завершённые турниры где я участвовал
-                let allMyTournaments = getAllMyParticipationTournaments()
-                
-                if myTournaments.isEmpty && allMyTournaments.isEmpty {
-                    VStack(spacing: 8) {
-                        Image(systemName: "trophy")
-                            .font(.system(size: 40))
-                            .foregroundColor(.gray)
-                        Text("Вы не записаны на турниры")
-                            .foregroundColor(.secondary)
-                    }
-                    .frame(maxWidth: .infinity)
-                    .padding(.top, 40)
-                } else {
-                    // Предстоящие турниры
-                    if !myTournaments.isEmpty {
-                        sectionHeader("Предстоящие", color: .green)
-                        ForEach(myTournaments.indices, id: \.self) { index in
-                            NavigationLink {
-                                TournamentDetailView(
-                                    tournament: myTournaments[index],
-                                    authService: authService,
-                                    tournamentService: tournamentService
-                                )
-                            } label: {
-                                tournamentCard(myTournaments[index])
-                            }
-                            .foregroundColor(.primary)
+                if !completedParticipationTournaments.isEmpty {
+                    sectionHeader("Завершённые", color: .gray)
+                    ForEach(completedParticipationTournaments.indices, id: \.self) { index in
+                        NavigationLink {
+                            TournamentDetailView(
+                                tournament: completedParticipationTournaments[index],
+                                authService: authService,
+                                tournamentService: tournamentService
+                            )
+                        } label: {
+                            tournamentCard(completedParticipationTournaments[index], isCompleted: true)
                         }
-                    }
-                    
-                    // Завершённые турниры
-                    if !allMyTournaments.isEmpty {
-                        sectionHeader("Завершённые", color: .gray)
-                        ForEach(allMyTournaments.indices, id: \.self) { index in
-                            tournamentCard(allMyTournaments[index])
-                        }
+                        .foregroundColor(.primary)
                     }
                 }
             }
-            .padding(.horizontal)
         }
+        .padding(.horizontal)
+    }
+    
     
     // MARK: - Вкладка "Организую"
     private var myCreatedTournamentsTab: some View {
         VStack(alignment: .leading, spacing: 12) {
-            // Мои активные турниры (upcoming)
             let activeTournaments = tournamentService.tournaments.filter { tournament in
                 tournament["organizerId"] as? String == authService.currentUserId
             }
             
-            // Мои завершённые турниры
-            let completedTournaments = getAllMyCreatedCompletedTournaments()
-            
-            if activeTournaments.isEmpty && completedTournaments.isEmpty {
+            if activeTournaments.isEmpty && completedCreatedTournaments.isEmpty {
                 VStack(spacing: 8) {
                     Image(systemName: "crown")
                         .font(.system(size: 40))
@@ -314,7 +315,6 @@ struct ProfileView: View {
                 .frame(maxWidth: .infinity)
                 .padding(.top, 40)
             } else {
-                // Активные турниры (предстоящие — вверху)
                 if !activeTournaments.isEmpty {
                     sectionHeader("Предстоящие", color: .green)
                     ForEach(activeTournaments.indices, id: \.self) { index in
@@ -331,11 +331,19 @@ struct ProfileView: View {
                     }
                 }
                 
-                // Завершённые
-                if !completedTournaments.isEmpty {
+                if !completedCreatedTournaments.isEmpty {
                     sectionHeader("Завершённые", color: .gray)
-                    ForEach(completedTournaments.indices, id: \.self) { index in
-                        tournamentCard(completedTournaments[index])
+                    ForEach(completedCreatedTournaments.indices, id: \.self) { index in
+                        NavigationLink {
+                            TournamentDetailView(
+                                tournament: completedCreatedTournaments[index],
+                                authService: authService,
+                                tournamentService: tournamentService
+                            )
+                        } label: {
+                            tournamentCard(completedCreatedTournaments[index], isCompleted: true)
+                        }
+                        .foregroundColor(.primary)
                     }
                 }
             }
@@ -355,32 +363,61 @@ struct ProfileView: View {
     private func gameCard(_ game: [String: Any], status: String) -> some View {
         Button(action: {
             if status == "active", let docId = game["documentId"] as? String {
-                // Активная заявка — открываю редактирование
                 editingRequestId = docId
             } else if status == "booked" {
-                // Забронированная — открываю детали встречи
                 bookedGameData = game
                 bookedGameId = game["documentId"] as? String
             }
-            // Завершённые игры пока не открываются (история)
         }) {
-            VStack(alignment: .leading, spacing: 6) {
-                HStack {
-                    Label(game["location"] as? String ?? "", systemImage: "mappin.circle.fill")
-                        .font(.subheadline)
-                    
-                    Spacer()
-                    
-                    Text(statusText(status))
-                        .font(.caption)
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 2)
-                        .background(statusColor(status).opacity(0.15))
-                        .foregroundColor(statusColor(status))
-                        .cornerRadius(4)
+            VStack(alignment: .leading, spacing: 8) {
+                // Сверху — имя партнёра (если есть)
+                if status == "booked", let partnerName = game["partnerName"] as? String {
+                    HStack {
+                        Image(systemName: "person.circle.fill")
+                            .foregroundColor(.green)
+                        Text(partnerName)
+                            .fontWeight(.semibold)
+                        Spacer()
+                        Text(statusText(status))
+                            .font(.caption)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 2)
+                            .background(statusColor(status).opacity(0.15))
+                            .foregroundColor(statusColor(status))
+                            .cornerRadius(4)
+                    }
+                } else {
+                    HStack {
+                        Text(game["desiredLevel"] as? String ?? "")
+                            .fontWeight(.semibold)
+                        Spacer()
+                        Text(statusText(status))
+                            .font(.caption)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 2)
+                            .background(statusColor(status).opacity(0.15))
+                            .foregroundColor(statusColor(status))
+                            .cornerRadius(4)
+                    }
                 }
                 
+                // Дата
+                if let timestamp = game["date"] as? Timestamp {
+                    let formatter = DateFormatter()
+                    let _ = (formatter.locale = Locale(identifier: "ru_RU"))
+                    let _ = (formatter.dateFormat = "d MMMM yyyy")
+                    Label(formatter.string(from: timestamp.dateValue()), systemImage: "calendar")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+                
+                // Время
                 Label(game["timeSlot"] as? String ?? "", systemImage: "clock")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                
+                // Место
+                Label(game["location"] as? String ?? "", systemImage: "mappin.circle.fill")
                     .font(.caption)
                     .foregroundColor(.secondary)
                 
@@ -409,12 +446,11 @@ struct ProfileView: View {
     }
     
     // MARK: - Компонент: карточка турнира
-    private func tournamentCard(_ tournament: [String: Any]) -> some View {
+    private func tournamentCard(_ tournament: [String: Any], isCompleted: Bool = false) -> some View {
         VStack(alignment: .leading, spacing: 6) {
             Text(tournament["title"] as? String ?? "")
                 .font(.subheadline.bold())
             
-            // Дата
             if let timestamp = tournament["date"] as? Timestamp {
                 let formatter = DateFormatter()
                 let _ = (formatter.locale = Locale(identifier: "ru_RU"))
@@ -424,16 +460,27 @@ struct ProfileView: View {
                     .foregroundColor(.secondary)
             }
             
+            // Время начала
+            if let startTime = tournament["startTime"] as? String, !startTime.isEmpty {
+                Label("в \(startTime)", systemImage: "clock")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
+            
             Label(tournament["location"] as? String ?? "", systemImage: "mappin.circle.fill")
                 .font(.caption)
                 .foregroundColor(.secondary)
             
-            // Количество участников
             let count = (tournament["participants"] as? [String])?.count ?? 0
             let max = tournament["maxParticipants"] as? Int ?? 0
             Label("\(count)/\(max) участников", systemImage: "person.3.fill")
                 .font(.caption)
                 .foregroundColor(.secondary)
+            
+            // Подсказка
+            Text(isCompleted ? "Нажмите для просмотра" : "Нажмите для деталей")
+                .font(.caption2)
+                .foregroundColor(isCompleted ? .gray : .blue)
         }
         .padding()
         .frame(maxWidth: .infinity, alignment: .leading)

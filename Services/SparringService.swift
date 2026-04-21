@@ -34,40 +34,70 @@ class SparringService: ObservableObject {
     
     // MARK: - Загрузка забронированных игр
     // Игры где я автор заявки ИЛИ я забронировал чужую заявку
-    func loadMyBookedGames(userId: String) {
-        // Загружаю заявки которые я создал и кто-то забронировал
-        db.collection("sparring_requests")
-            .whereField("userId", isEqualTo: userId)
-            .whereField("status", isEqualTo: "booked")
-            .getDocuments { [weak self] snapshot, _ in
-                DispatchQueue.main.async {
-                    var games: [[String: Any]] = snapshot?.documents.map { doc in
-                        var data = doc.data()
-                        data["documentId"] = doc.documentID
-                        data["myRole"] = "автор"  // Я создал эту заявку
-                        return data
-                    } ?? []
-                    
-                    // Также загружаю заявки которые я забронировал
-                    self?.db.collection("sparring_requests")
-                        .whereField("bookedBy", isEqualTo: userId)
-                        .whereField("status", isEqualTo: "booked")
-                        .getDocuments { snapshot2, _ in
-                            DispatchQueue.main.async {
-                                let bookedByMe: [[String: Any]] = snapshot2?.documents.map { doc in
-                                    var data = doc.data()
-                                    data["documentId"] = doc.documentID
-                                    data["myRole"] = "партнёр"  // Я откликнулся
-                                    return data
-                                } ?? []
-                                
-                                games.append(contentsOf: bookedByMe)
-                                self?.myBookedGames = games
+        func loadMyBookedGames(userId: String) {
+            db.collection("sparring_requests")
+                .whereField("userId", isEqualTo: userId)
+                .whereField("status", isEqualTo: "booked")
+                .getDocuments { [weak self] snapshot, _ in
+                    DispatchQueue.main.async {
+                        var games: [[String: Any]] = snapshot?.documents.map { doc in
+                            var data = doc.data()
+                            data["documentId"] = doc.documentID
+                            data["myRole"] = "автор"
+                            // Партнёр — тот кто забронировал
+                            data["partnerId"] = data["bookedBy"] as? String ?? ""
+                            return data
+                        } ?? []
+                        
+                        self?.db.collection("sparring_requests")
+                            .whereField("bookedBy", isEqualTo: userId)
+                            .whereField("status", isEqualTo: "booked")
+                            .getDocuments { snapshot2, _ in
+                                DispatchQueue.main.async {
+                                    let bookedByMe: [[String: Any]] = snapshot2?.documents.map { doc in
+                                        var data = doc.data()
+                                        data["documentId"] = doc.documentID
+                                        data["myRole"] = "партнёр"
+                                        // Партнёр — автор заявки
+                                        data["partnerId"] = data["userId"] as? String ?? ""
+                                        return data
+                                    } ?? []
+                                    
+                                    games.append(contentsOf: bookedByMe)
+                                    
+                                    // Подгружаем имена партнёров
+                                    self?.loadPartnerNames(games: games) { updatedGames in
+                                        self?.myBookedGames = updatedGames
+                                    }
+                                }
                             }
-                        }
+                    }
+                }
+        }
+        
+        // MARK: - Подгрузка имён партнёров к играм
+        private func loadPartnerNames(games: [[String: Any]], completion: @escaping ([[String: Any]]) -> Void) {
+            var updatedGames = games
+            let group = DispatchGroup()
+            
+            for (index, game) in games.enumerated() {
+                guard let partnerId = game["partnerId"] as? String, !partnerId.isEmpty else { continue }
+                group.enter()
+                
+                db.collection("users").document(partnerId).getDocument { doc, _ in
+                    if let data = doc?.data() {
+                        let firstName = data["firstName"] as? String ?? ""
+                        let lastName = data["lastName"] as? String ?? ""
+                        updatedGames[index]["partnerName"] = "\(firstName) \(lastName)"
+                    }
+                    group.leave()
                 }
             }
-    }
+            
+            group.notify(queue: .main) {
+                completion(updatedGames)
+            }
+        }
     
     // MARK: - Загрузка истории завершённых игр
     func loadMyCompletedGames(userId: String) {

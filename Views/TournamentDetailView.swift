@@ -153,8 +153,8 @@ struct TournamentDetailView: View {
                             }
                             
                             // Кнопки управления (только организатор)
-                            if isOrganizer {
-                                HStack(spacing: 12) {
+                            if isOrganizer && tournament["status"] as? String != "completed" {
+                                    HStack(spacing:12) {
                                     if confirmedParticipants.contains(participant.id) {
                                         Button(action: {
                                             unconfirmAction(userId: participant.id)
@@ -200,7 +200,7 @@ struct TournamentDetailView: View {
             
             // Завершение турнира (только организатор)
             // Кнопки для организатора
-            if isOrganizer {
+            if isOrganizer && tournament["status"] as? String != "completed" {
                 Section {
                     Button(action: { showEdit = true }) {
                         Label("Редактировать турнир", systemImage: "pencil")
