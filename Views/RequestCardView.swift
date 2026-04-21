@@ -19,17 +19,26 @@ struct RequestCardView: View {
     
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
-            // Верхняя часть: аватар + имя + уровень
             HStack(spacing: 12) {
-                // Имя и уровень пользователя
                 Image(systemName: "person.circle.fill")
                     .font(.system(size: 44))
                     .foregroundColor(.green)
-                // Иконка игрока
+                
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(request["userName"] as? String ?? "Загрузка...")
-                        .fontWeight(.semibold)
-                    // Уровень игры и хват
+                    // Имя кликабельное — переход к профилю игрока
+                    if let userId = request["userId"] as? String {
+                        NavigationLink {
+                            PlayerProfileView(userId: userId)
+                        } label: {
+                            Text(request["userName"] as? String ?? "Загрузка...")
+                                .fontWeight(.semibold)
+                                .foregroundColor(.primary)
+                        }
+                    } else {
+                        Text(request["userName"] as? String ?? "Загрузка...")
+                            .fontWeight(.semibold)
+                    }
+                    
                     HStack(spacing: 4) {
                         Text(request["userSkill"] as? String ?? "")
                         Text("•")
