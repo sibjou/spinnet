@@ -52,13 +52,13 @@ struct EditProfileView: View {
                         }
                         
                         Section {
-                            TextField("Ссылка на ваш профиль на r.ttw.ru", text: $ratingLink)
+                            TextField("https://r.ttw.ru/players/?id=...", text: $ratingLink)
                                 .keyboardType(.URL)
                                 .autocapitalization(.none)
                         } header: {
                             Text("Рейтинг TTW")
                         } footer: {
-                            Text("Необязательно. Укажите ссылку на свой профиль в рейтинге настольного тенниса")
+                            Text("Вставьте ссылку на ваш профиль с сайта r.ttw.ru. Пример: https://r.ttw.ru/players/?id=01a0a01")
                                 .font(.caption)
                         }
                     }
@@ -109,6 +109,14 @@ struct EditProfileView: View {
     // MARK: - Сохранение изменений
     private func saveChanges() {
         guard let userId = authService.currentUserId else { return }
+        
+        // Валидация ссылки на рейтинг
+        if !ratingLink.isEmpty && !isValidRatingLink(ratingLink) {
+            errorMessage = "Ссылка должна вести на r.ttw.ru. Пример: https://r.ttw.ru/players/?id=123abc"
+            showError = true
+            return
+        }
+        
         isSaving = true
         
         let updateData: [String: Any] = [
@@ -133,5 +141,16 @@ struct EditProfileView: View {
                 }
             }
         }
+    }
+    
+    // MARK: - Проверка ссылки на рейтинг
+    // Принимаем только ссылки с официального сайта r.ttw.ru
+    private func isValidRatingLink(_ link: String) -> Bool {
+        guard let url = URL(string: link),
+              let host = url.host else { return false }
+        
+        // Разрешённые домены
+        let allowedHosts = ["r.ttw.ru", "www.r.ttw.ru", "https://r.ttw.ru", "https://www.r.ttw.ru"]
+        return allowedHosts.contains(host.lowercased())
     }
 }

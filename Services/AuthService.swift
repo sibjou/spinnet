@@ -35,8 +35,7 @@ class AuthService: ObservableObject {
     // MARK: - Регистрация нового пользователя
     // 1. Создаёт аккаунт в Firebase Auth (email + пароль)
     // 2. Сохраняет профиль (имя, город, уровень и тд) в Firestore
-    func register(email: String, password: String, firstName: String, lastName: String,
-                  city: String, skillLevel: String, grip: String, playStyle: String) {
+    func register(email: String, password: String, firstName: String, lastName: String, city: String, skillLevel: String, grip: String, playStyle: String, ratingLink: String = "") {
         isLoading = true    // Включаем индикатор загрузки
         errorMessage = nil  // Сбрасываем предыдущую ошибку
         
@@ -70,7 +69,7 @@ class AuthService: ObservableObject {
                     "skillLevel": skillLevel,
                     "grip": grip,
                     "playStyle": playStyle,
-                    "ratingLink": "",
+                    "ratingLink": ratingLink,
                     "createdAt": Timestamp() // Время создания аккаунта
                 ]
                 
