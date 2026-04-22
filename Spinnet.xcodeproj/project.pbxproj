@@ -20,6 +20,7 @@
 		CB55089E2F9256BC00898F2B /* EditTournamentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB55089D2F9256B900898F2B /* EditTournamentView.swift */; };
 		CB6664C32F8AA40900DB34E9 /* FeedView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB6664C12F8AA3FA00DB34E9 /* FeedView.swift */; };
 		CB6664C72F8AA42700DB34E9 /* RequestCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB6664C62F8AA42700DB34E9 /* RequestCardView.swift */; };
+		CBBD91CB2F98EB3900FBF1C0 /* EditProfileView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CBBD91CA2F98EB3000FBF1C0 /* EditProfileView.swift */; };
 		CBD58DC52F8A6B7A00E92606 /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = CBD58DC42F8A6B7A00E92606 /* GoogleService-Info.plist */; };
 		CBD58DC82F8A70CD00E92606 /* AuthService.swift in Sources */ = {isa = PBXBuildFile; fileRef = CBD58DC72F8A70BA00E92606 /* AuthService.swift */; };
 		CBD58DCA2F8A710300E92606 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CBD58DC92F8A70FB00E92606 /* ContentView.swift */; };
@@ -47,6 +48,7 @@
 		CB55089D2F9256B900898F2B /* EditTournamentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditTournamentView.swift; sourceTree = "<group>"; };
 		CB6664C12F8AA3FA00DB34E9 /* FeedView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FeedView.swift; sourceTree = "<group>"; };
 		CB6664C62F8AA42700DB34E9 /* RequestCardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RequestCardView.swift; sourceTree = "<group>"; };
+		CBBD91CA2F98EB3000FBF1C0 /* EditProfileView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditProfileView.swift; sourceTree = "<group>"; };
 		CBD58DB62F8A60A500E92606 /* Spinnet.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Spinnet.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		CBD58DC42F8A6B7A00E92606 /* GoogleService-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "GoogleService-Info.plist"; sourceTree = "<group>"; };
 		CBD58DC72F8A70BA00E92606 /* AuthService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthService.swift; sourceTree = "<group>"; };
@@ -132,6 +134,7 @@
 		CBD58DE22F8A8EE800E92606 /* Views */ = {
 			isa = PBXGroup;
 			children = (
+				CBBD91CA2F98EB3000FBF1C0 /* EditProfileView.swift */,
 				CB55089D2F9256B900898F2B /* EditTournamentView.swift */,
 				CB55089B2F91509400898F2B /* BookedGameDetailView.swift */,
 				CB5508992F9115A400898F2B /* EditRequestView.swift */,
@@ -249,6 +252,7 @@
 				CB55087E2F8E708000898F2B /* SettingsView.swift in Sources */,
 				CB3849A92F8D4C43004CFA10 /* CreateTournamentView.swift in Sources */,
 				CBD58DCE2F8A716900E92606 /* RegisterView.swift in Sources */,
+				CBBD91CB2F98EB3900FBF1C0 /* EditProfileView.swift in Sources */,
 				CB4D34142F982F910029347A /* StatusManager.swift in Sources */,
 				CB3849A52F8D4B8D004CFA10 /* TournamentService.swift in Sources */,
 				CB55089A2F9115AE00898F2B /* EditRequestView.swift in Sources */,

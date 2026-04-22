@@ -20,6 +20,7 @@ struct ProfileView: View {
     @State private var completedParticipationTournaments: [[String: Any]] = []
     @State private var completedCreatedTournaments: [[String: Any]] = []
     @State private var showSettings = false
+    @State private var showEditProfile = false
     
     var body: some View {
         NavigationStack {
@@ -29,7 +30,7 @@ struct ProfileView: View {
                     profileHeader
                     
                     // Кнопка редактирования профиля
-                    Button(action: {}) {
+                    Button(action: { showEditProfile = true }) {
                         Text("Редактировать профиль")
                             .font(.subheadline)
                             .fontWeight(.medium)
@@ -88,6 +89,15 @@ struct ProfileView: View {
                     )
                 )
             }
+            
+            .sheet(isPresented: $showEditProfile) {
+                EditProfileView(
+                    authService: authService,
+                    isPresented: $showEditProfile,
+                    onUpdate: { loadAllData() }
+                )
+            }
+            
             .onAppear { loadAllData() }
            
             
