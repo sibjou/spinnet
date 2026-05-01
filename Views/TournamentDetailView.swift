@@ -132,11 +132,18 @@ struct TournamentDetailView: View {
                 } else {
                     ForEach(participantNames, id: \.id) { participant in
                         VStack(alignment: .leading, spacing: 8) {
-                            // Имя участника
+                            // Имя участника — теперь кликабельное
                             HStack {
-                                Image(systemName: "person.circle.fill")
-                                    .foregroundColor(.green)
-                                Text(participant.name)
+                                NavigationLink {
+                                    PlayerProfileView(userId: participant.id)
+                                } label: {
+                                    HStack {
+                                        Image(systemName: "person.circle.fill")
+                                            .foregroundColor(.green)
+                                        Text(participant.name)
+                                            .foregroundColor(.primary)
+                                    }
+                                }
                                 
                                 Spacer()
                                 
@@ -152,9 +159,9 @@ struct TournamentDetailView: View {
                                 }
                             }
                             
-                            // Кнопки управления (только организатор)
+                            // Кнопки управления (только организатор незавершённого турнира)
                             if isOrganizer && tournament["status"] as? String != "completed" {
-                                    HStack(spacing:12) {
+                                HStack(spacing: 12) {
                                     if confirmedParticipants.contains(participant.id) {
                                         Button(action: {
                                             unconfirmAction(userId: participant.id)

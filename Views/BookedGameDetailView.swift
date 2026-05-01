@@ -57,18 +57,24 @@ struct BookedGameDetailView: View {
                             Text("Загрузка...")
                                 .foregroundColor(.secondary)
                         }
-                    } else {
-                        HStack(spacing: 12) {
-                            Image(systemName: "person.circle.fill")
-                                .font(.system(size: 40))
-                                .foregroundColor(.green)
-                            
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text(partnerName)
-                                    .fontWeight(.semibold)
-                                Text("\(partnerSkill) • \(partnerCity)")
-                                    .font(.caption)
-                                    .foregroundColor(.secondary)
+                    } else if let id = partnerId {
+                        // Кликабельный блок — ведёт в профиль партнёра
+                        NavigationLink {
+                            PlayerProfileView(userId: id)
+                        } label: {
+                            HStack(spacing: 12) {
+                                Image(systemName: "person.circle.fill")
+                                    .font(.system(size: 40))
+                                    .foregroundColor(.green)
+                                
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(partnerName)
+                                        .fontWeight(.semibold)
+                                        .foregroundColor(.primary)
+                                    Text("\(partnerSkill) • \(partnerCity)")
+                                        .font(.caption)
+                                        .foregroundColor(.secondary)
+                                }
                             }
                         }
                     }
@@ -90,11 +96,11 @@ struct BookedGameDetailView: View {
                 // MARK: - Чат уточнений (заглушка)
                 Section {
                     Button(action: {}) {
-                        Label("Открыть чат уточнений", systemImage: "bubble.left.and.bubble.right")
+                        Label("Изменить параметры встречи", systemImage: "bubble.left.and.bubble.right")
                     }
                     .disabled(true)
                 } footer: {
-                    Text("Чат с вариантами ответов будет доступен в следующем обновлении")
+                    Text("Изменение с вариантами ответов будет доступно в следующем обновлении")
                         .font(.caption)
                 }
                 
