@@ -111,9 +111,9 @@ struct EditRequestView: View {
     
     // MARK: - Загрузка данных заявки для редактирования
     private func loadRequest() {
-        Firestore.firestore().collection("sparring_requests").document(requestId).getDocument { doc, _ in
+        SparringService().fetchRequest(id: requestId) { data in
             DispatchQueue.main.async {
-                if let data = doc?.data() {
+                if let data = data {
                     self.location = data["location"] as? String ?? ""
                     self.desiredLevel = data["desiredLevel"] as? String ?? "Любой"
                     
@@ -154,10 +154,10 @@ struct EditRequestView: View {
             "desiredLevel": desiredLevel
         ]
         
-        Firestore.firestore().collection("sparring_requests").document(requestId).updateData(updateData) { error in
+        SparringService().updateRequest(id: requestId, fields: updateData) { success in
             DispatchQueue.main.async {
                 isSaving = false
-                if error == nil {
+                if success {
                     onUpdate()
                     isPresented = false
                 }
@@ -167,9 +167,9 @@ struct EditRequestView: View {
     
     // MARK: - Удаление заявки
     private func deleteRequest() {
-        Firestore.firestore().collection("sparring_requests").document(requestId).delete { error in
+        SparringService().deleteRequest(id: requestId) { success in
             DispatchQueue.main.async {
-                if error == nil {
+                if success {
                     onUpdate()
                     isPresented = false
                 }

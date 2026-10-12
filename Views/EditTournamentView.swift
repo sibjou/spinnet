@@ -158,9 +158,9 @@ struct EditTournamentView: View {
     }
 
     private func loadTournament() {
-        Firestore.firestore().collection("tournaments").document(tournamentId).getDocument { doc, _ in
+        TournamentService().fetchTournament(id: tournamentId) { data in
             DispatchQueue.main.async {
-                if let data = doc?.data() {
+                if let data = data {
                     self.title          = data["title"]          as? String ?? ""
                     self.city           = data["city"]           as? String ?? ""
                     self.location       = data["location"]       as? String ?? ""

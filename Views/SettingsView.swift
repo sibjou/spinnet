@@ -65,12 +65,6 @@ struct SettingsView: View {
                                 .foregroundColor(AppColor.warning)
                         }
                     }
-
-                    Section("Разработка") {
-                        Button("Тест уведомления") {
-                            NotificationService.shared.sendTestNotification()
-                        }
-                    }
                 }
                 #endif
 

@@ -502,7 +502,7 @@ struct ClarificationDetailView: View {
         if isBlocked {
             return
         }
-        print("🟡 send вызван, type: \(type.rawValue), isDraft: \(isDraft), realId: \(realClarificationId ?? "nil")")
+        debugLog("🟡 send вызван, type: \(type.rawValue), isDraft: \(isDraft), realId: \(realClarificationId ?? "nil")")
         isProcessing = true
 
         // Если диалог ещё draft — создаём его вместе с первым действием

@@ -133,4 +133,55 @@ class TournamentService: ObservableObject {
             "status": "completed"
         ]) { error in DispatchQueue.main.async { completion(error == nil) } }
     }
+
+    // MARK: - Один турнир
+    func fetchTournament(id: String, completion: @escaping ([String: Any]?) -> Void) {
+        db.collection("tournaments").document(id).getDocument { doc, _ in
+            DispatchQueue.main.async {
+                guard var data = doc?.data() else {
+                    completion(nil)
+                    return
+                }
+                data["documentId"] = doc?.documentID
+                completion(data)
+            }
+        }
+    }
+
+    // MARK: - Турниры пользователя
+    // Два точечных запроса вместо чтения всей коллекции:
+    // где он участник и где он организатор (любой статус).
+    func loadUserTournaments(userId: String,
+                             completion: @escaping (_ participating: [[String: Any]],
+                                                    _ organizing: [[String: Any]]) -> Void) {
+        let group = DispatchGroup()
+        var participating: [[String: Any]] = []
+        var organizing: [[String: Any]] = []
+
+        func mapped(_ snapshot: QuerySnapshot?) -> [[String: Any]] {
+            snapshot?.documents.map { doc in
+                var data = doc.data()
+                data["documentId"] = doc.documentID
+                return data
+            } ?? []
+        }
+
+        group.enter()
+        db.collection("tournaments")
+            .whereField("participants", arrayContains: userId)
+            .getDocuments { snapshot, _ in
+                participating = mapped(snapshot)
+                group.leave()
+            }
+
+        group.enter()
+        db.collection("tournaments")
+            .whereField("organizerId", isEqualTo: userId)
+            .getDocuments { snapshot, _ in
+                organizing = mapped(snapshot)
+                group.leave()
+            }
+
+        group.notify(queue: .main) { completion(participating, organizing) }
+    }
 }

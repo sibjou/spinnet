@@ -72,9 +72,7 @@ struct BookedGameDetailView: View {
                             PlayerProfileView(userId: id)
                         } label: {
                             HStack(spacing: 12) {
-                                Image(systemName: "person.circle.fill")
-                                    .font(.system(size: 40))
-                                    .foregroundColor(.green)
+                                InitialsAvatar(fullName: partnerName, userId: id, size: 40)
                                 VStack(alignment: .leading, spacing: 2) {
                                     Text(partnerName).fontWeight(.semibold)
                                     Text("\(partnerSkill) • \(partnerCity)")
@@ -222,19 +220,15 @@ struct BookedGameDetailView: View {
             return
         }
 
-        Firestore.firestore().collection("users").document(id).getDocument { doc, _ in
-            DispatchQueue.main.async {
-                if let data = doc?.data() {
-                    let firstName = data["firstName"] as? String ?? ""
-                    let lastName  = data["lastName"]  as? String ?? ""
-                    self.partnerName  = "\(firstName) \(lastName)"
-                    self.partnerSkill = data["skillLevel"] as? String ?? ""
-                    self.partnerCity  = data["city"]       as? String ?? ""
-                } else {
-                    self.partnerName = "Пользователь удалён"
-                }
-                self.isLoadingPartner = false
+        UserService.shared.fetchUser(id: id) { data in
+            if let data = data {
+                self.partnerName  = UserService.fullName(from: data)
+                self.partnerSkill = data["skillLevel"] as? String ?? ""
+                self.partnerCity  = data["city"]       as? String ?? ""
+            } else {
+                self.partnerName = "Пользователь удалён"
             }
+            self.isLoadingPartner = false
         }
     }
 
@@ -244,19 +238,11 @@ struct BookedGameDetailView: View {
         guard let requestId = game["documentId"] as? String else { return }
         isLoadingClarification = true
 
-        let db = Firestore.firestore()
-
         // Ищем существующий диалог
-        db.collection("meeting_clarifications")
-            .whereField("sparringRequestId", isEqualTo: requestId)
-            .whereField("status", isEqualTo: "active")
-            .limit(to: 1)
-            .getDocuments { snapshot, _ in
-                DispatchQueue.main.async {
+        ClarificationService().findActiveClarification(forRequestId: requestId) { existing in
                     self.isLoadingClarification = false
 
-                    if let doc = snapshot?.documents.first,
-                       let clar = MeetingClarification(id: doc.documentID, data: doc.data()) {
+                    if let clar = existing {
                         self.appState.clarificationToOpen = clar
                         self.appState.selectedTab = .chat
                         self.isPresented = false
@@ -306,8 +292,7 @@ struct BookedGameDetailView: View {
                             self.isPresented = false
                         }
                     }
-                }
-            }
+        }
     }
 
     // MARK: - Отмена бронирования

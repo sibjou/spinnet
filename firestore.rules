@@ -1,0 +1,142 @@
+rules_version = '2';
+
+// Правила безопасности Firestore для Spinnet.
+//
+// ВАЖНО: файл не применяется автоматически. Перед публикацией в консоли
+// (Firestore → Rules) проверьте каждый экран приложения или прогоните правила
+// через Rules Playground / эмулятор. Часть записей пока делает клиент
+// (уведомления другому пользователю, смена статусов по времени) —
+// это допущения, которые уйдут при переносе логики на сервер.
+//
+// Админы: создайте документ admins/{uid} вручную в консоли (поле можно оставить пустым).
+// Клиент не может создавать и менять эти документы.
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(uid) {
+      return signedIn() && request.auth.uid == uid;
+    }
+
+    function isAdmin() {
+      return signedIn() &&
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+    }
+
+    // Изменились только перечисленные поля
+    function changesOnly(keys) {
+      return request.resource.data.diff(resource.data).affectedKeys().hasOnly(keys);
+    }
+
+    // ---------- Администраторы ----------
+    match /admins/{uid} {
+      allow read: if isOwner(uid);
+      allow write: if false;
+    }
+
+    // ---------- Профили ----------
+    match /users/{uid} {
+      allow read: if signedIn();
+      allow create: if isOwner(uid);
+      allow update: if isOwner(uid);
+      allow delete: if false;
+    }
+
+    // ---------- Заявки на спарринг ----------
+    match /sparring_requests/{id} {
+      allow read: if signedIn();
+
+      allow create: if signedIn() && request.resource.data.userId == request.auth.uid;
+
+      allow update: if signedIn() && (
+        // автор правит свою заявку
+        resource.data.userId == request.auth.uid ||
+        // забронировавший (подтверждение, отмена, статусы)
+        resource.data.get('bookedBy', '') == request.auth.uid ||
+        // бронирование свободной заявки
+        (resource.data.status == 'active' &&
+         request.resource.data.status == 'booked' &&
+         request.resource.data.bookedBy == request.auth.uid &&
+         changesOnly(['status', 'bookedBy', 'bookedAt'])) ||
+        // автосмена статуса по времени (клиент любого пользователя)
+        changesOnly(['status', 'completedAt'])
+      );
+
+      allow delete: if isOwner(resource.data.userId);
+    }
+
+    // ---------- Турниры ----------
+    match /tournaments/{id} {
+      allow read: if signedIn();
+
+      allow create: if signedIn() && request.resource.data.organizerId == request.auth.uid;
+
+      allow update: if signedIn() && (
+        // организатор управляет турниром
+        resource.data.organizerId == request.auth.uid ||
+        // игрок записывается или отменяет участие — только за себя
+        (changesOnly(['participants']) &&
+         request.resource.data.participants.toSet()
+           .difference(resource.data.participants.toSet())
+           .hasOnly([request.auth.uid]) &&
+         resource.data.participants.toSet()
+           .difference(request.resource.data.participants.toSet())
+           .hasOnly([request.auth.uid])) ||
+        // автосмена статуса по времени
+        changesOnly(['status', 'completedAt'])
+      );
+
+      allow delete: if isOwner(resource.data.organizerId);
+    }
+
+    // ---------- Отзывы ----------
+    match /reviews/{id} {
+      allow read: if signedIn();
+      allow create: if signedIn() && request.resource.data.fromUserId == request.auth.uid;
+      // автор правит отзыв, получатель жалуется, админ модерирует
+      allow update: if signedIn() && (
+        resource.data.fromUserId == request.auth.uid ||
+        resource.data.toUserId == request.auth.uid ||
+        isAdmin()
+      );
+      allow delete: if false;   // удаление мягкое (moderationStatus)
+    }
+
+    // ---------- Согласование встреч ----------
+    // Чтение открыто для авторизованных: поиск диалога по заявке идёт без фильтра по участнику.
+    match /meeting_clarifications/{id} {
+      allow read: if signedIn();
+      allow create: if signedIn() &&
+        request.auth.uid in [request.resource.data.authorId, request.resource.data.bookedById];
+      allow update, delete: if signedIn() &&
+        request.auth.uid in [resource.data.authorId, resource.data.bookedById];
+    }
+
+    // TODO: ужесточить — проверять участие в диалоге через get() на clarificationId
+    match /meeting_actions/{id} {
+      allow read, write: if signedIn();
+    }
+
+    // ---------- Уведомления ----------
+    // Создавать может любой авторизованный (клиент пишет в ящик партнёра),
+    // читать, отмечать и удалять — только владелец ящика.
+    match /notifications/{uid}/items/{id} {
+      allow create: if signedIn();
+      allow read, update, delete: if isOwner(uid);
+    }
+
+    // ---------- Блокировки ----------
+    match /blocks/{uid}/blockedUsers/{blockedId} {
+      allow read, write: if isOwner(uid);
+    }
+
+    // Запрос «кто заблокировал меня» (collectionGroup): видны только записи про меня
+    match /{path=**}/blockedUsers/{blockedId} {
+      allow read: if signedIn() && resource.data.blockedUserId == request.auth.uid;
+    }
+  }
+}

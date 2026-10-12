@@ -140,9 +140,9 @@ struct EditProfileView: View {
     private func loadProfile() {
         guard let userId = authService.currentUserId else { return }
 
-        Firestore.firestore().collection("users").document(userId).getDocument { doc, _ in
+        UserService.shared.fetchUser(id: userId) { data in
             DispatchQueue.main.async {
-                if let data = doc?.data() {
+                if let data = data {
                     self.firstName  = data["firstName"]  as? String ?? ""
                     self.lastName   = data["lastName"]   as? String ?? ""
                     self.city       = data["city"]       as? String ?? ""
@@ -210,17 +210,17 @@ struct EditProfileView: View {
             updateData["lastNameChangeAt"] = Timestamp()
         }
 
-        Firestore.firestore().collection("users").document(userId).updateData(updateData) { error in
+        UserService.shared.updateProfile(userId: userId, fields: updateData) { error in
             DispatchQueue.main.async {
                 if let error = error {
-                    print("❌ Ошибка сохранения профиля: \(error.localizedDescription)")
+                    debugLog("❌ Ошибка сохранения профиля: \(error.localizedDescription)")
                     isSaving = false
                     errorMessage = "Не удалось сохранить: \(error.localizedDescription)"
                     showError = true
                     return
                 }
 
-                print("✅ Профиль сохранён в users")
+                debugLog("✅ Профиль сохранён в users")
 
                 // Профиль сохранён — закрываем окно сразу.
                 // Обновление копий идёт в фоне и не блокирует закрытие.
@@ -230,7 +230,7 @@ struct EditProfileView: View {
 
                 if needsDenormUpdate {
                     self.updateDenormalizedData(userId: userId) {
-                        print("✅ Денормализованные копии обновлены")
+                        debugLog("✅ Денормализованные копии обновлены")
                     }
                 }
             }
@@ -241,52 +241,15 @@ struct EditProfileView: View {
     // Обновляем копии в активных/забронированных заявках и предстоящих турнирах.
     // История (завершённые игры) не трогается — хранит данные на момент игры.
     private func updateDenormalizedData(userId: String, completion: @escaping () -> Void) {
-        let db = Firestore.firestore()
-        let group = DispatchGroup()
-
-        group.enter()
-        db.collection("sparring_requests")
-            .whereField("userId", isEqualTo: userId)
-            .whereField("status", in: ["active", "booked", "in_progress"])
-            .getDocuments { snapshot, _ in
-                if let docs = snapshot?.documents, !docs.isEmpty {
-                    let batch = db.batch()
-                    for doc in docs {
-                        batch.updateData([
-                            "authorFirstName":  self.firstName,
-                            "authorLastName":   self.lastName,
-                            "authorSkillLevel": self.skillLevel,
-                            "authorGrip":       self.grip,
-                            "authorPlayStyle":  self.playStyle
-                        ], forDocument: doc.reference)
-                    }
-                    batch.commit { _ in group.leave() }
-                } else {
-                    group.leave()
-                }
-            }
-
-        group.enter()
-        db.collection("tournaments")
-            .whereField("organizerId", isEqualTo: userId)
-            .whereField("status", in: ["upcoming", "in_progress"])
-            .getDocuments { snapshot, _ in
-                if let docs = snapshot?.documents, !docs.isEmpty {
-                    let batch = db.batch()
-                    for doc in docs {
-                        batch.updateData([
-                            "organizerName": "\(self.firstName) \(self.lastName)"
-                        ], forDocument: doc.reference)
-                    }
-                    batch.commit { _ in group.leave() }
-                } else {
-                    group.leave()
-                }
-            }
-
-        group.notify(queue: .main) {
-            completion()
-        }
+        UserService.shared.updateDenormalizedAuthorData(
+            userId: userId,
+            firstName: firstName,
+            lastName: lastName,
+            skillLevel: skillLevel,
+            grip: grip,
+            playStyle: playStyle,
+            completion: completion
+        )
     }
 
     // MARK: - Проверка ссылки на рейтинг

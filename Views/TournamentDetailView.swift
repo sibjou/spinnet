@@ -154,8 +154,7 @@ struct TournamentDetailView: View {
                                 if participant.id == authService.currentUserId {
                                     // Это я — некликабельный, с пометкой "вы"
                                     HStack {
-                                        Image(systemName: "person.circle.fill")
-                                            .foregroundColor(.green)
+                                        InitialsAvatar(fullName: participant.name, userId: participant.id, size: 28)
                                         Text(participant.name)
                                             .foregroundColor(.primary)
                                         Text("(вы)")
@@ -168,8 +167,7 @@ struct TournamentDetailView: View {
                                         PlayerProfileView(userId: participant.id)
                                     } label: {
                                         HStack {
-                                            Image(systemName: "person.circle.fill")
-                                                .foregroundColor(.green)
+                                            InitialsAvatar(fullName: participant.name, userId: participant.id, size: 28)
                                             Text(participant.name)
                                                 .foregroundColor(.primary)
                                         }
@@ -320,22 +318,12 @@ struct TournamentDetailView: View {
             return
         }
         
-        let db = Firestore.firestore()
-        let group = DispatchGroup()
-        var names: [(id: String, name: String)] = []
-        
-        for userId in participants {
-            group.enter()
-            db.collection("users").document(userId).getDocument { doc, _ in
-                if let data = doc?.data() {
-                    let name = "\(data["firstName"] ?? "") \(data["lastName"] ?? "")"
-                    names.append((id: userId, name: name))
-                }
-                group.leave()
+        UserService.shared.fetchNames(ids: participants) { namesById in
+            let names = participants.compactMap { id -> (id: String, name: String)? in
+                guard let name = namesById[id] else { return nil }
+                return (id: id, name: name)
             }
-        }
-        
-        group.notify(queue: .main) {
+
             // Текущий пользователь всегда сверху списка
             let myId = self.authService.currentUserId
             self.participantNames = names.sorted { a, b in
@@ -352,18 +340,14 @@ struct TournamentDetailView: View {
     private func reloadTournament() {
         guard let docId = tournament["documentId"] as? String else { return }
         
-        let db = Firestore.firestore()
-        db.collection("tournaments").document(docId).getDocument { doc, _ in
-            DispatchQueue.main.async {
-                if var data = doc?.data() {
-                    data["documentId"] = doc?.documentID
-                    // Сохраняю имя организатора (его нет в Firestore, мы его подгрузили)
-                    data["organizerName"] = self.tournament["organizerName"]
-                    self.tournament = data
-                    self.loadParticipantNames()
-                }
-                self.isProcessing = false
+        tournamentService.fetchTournament(id: docId) { fresh in
+            if var data = fresh {
+                // Сохраняю имя организатора (его нет в Firestore, мы его подгрузили)
+                data["organizerName"] = self.tournament["organizerName"]
+                self.tournament = data
+                self.loadParticipantNames()
             }
+            self.isProcessing = false
         }
     }
     

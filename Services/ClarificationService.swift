@@ -33,10 +33,6 @@ class ClarificationService: ObservableObject {
         fromUserName: String,
         completion: @escaping (String?) -> Void
     ) {
-        print("🔵 createDraftWithFirstAction вызван")
-        print("   sparringRequestId: \(draftClarification.sparringRequestId)")
-        print("   actionType: \(actionType.rawValue)")
-        print("   fromUserId: \(fromUserId)")
 
         let realId = draftClarification.sparringRequestId
 
@@ -53,7 +49,7 @@ class ClarificationService: ObservableObject {
                         cleanBatch.deleteDocument(doc.reference)
                     }
                     cleanBatch.commit { _ in
-                        print("🗑 Очищено \(documents.count) старых actions перед созданием draft")
+                        debugLog("🗑 Очищено \(documents.count) старых actions перед созданием draft")
                         // Теперь создаём новый диалог + первое действие
                         self.performDraftCreation(
                             draftClarification: draftClarification,
@@ -125,9 +121,9 @@ class ClarificationService: ObservableObject {
         batch.commit { error in
             DispatchQueue.main.async {
                 if let error = error {
-                    print("❌ Ошибка batch.commit: \(error.localizedDescription)")
+                    debugLog("❌ Ошибка batch.commit: \(error.localizedDescription)")
                 } else {
-                    print("✅ Batch успешно сохранён, realId: \(realId)")
+                    debugLog("✅ Batch успешно сохранён, realId: \(realId)")
                 }
                 completion(error == nil ? realId : nil)
             }
@@ -237,7 +233,7 @@ class ClarificationService: ObservableObject {
             .order(by: "createdAt", descending: false)
             .addSnapshotListener { snapshot, error in
                 if let error = error {
-                    print("Actions listener error: \(error.localizedDescription)")
+                    debugLog("Actions listener error: \(error.localizedDescription)")
                     return
                 }
                 let actions = snapshot?.documents.compactMap {
@@ -361,7 +357,7 @@ class ClarificationService: ObservableObject {
                     batch.deleteDocument(doc.reference)
                 }
                 batch.commit { _ in
-                    print("🗑 Удалено \(documents.count) actions для clarification \(id)")
+                    debugLog("🗑 Удалено \(documents.count) actions для clarification \(id)")
                 }
             }
     }
@@ -474,5 +470,23 @@ class ClarificationService: ObservableObject {
     func stopUnreadListener() {
         unreadListener?.remove()
         unreadListener = nil
+    }
+
+    // MARK: - Активный диалог по заявке (если уже есть)
+    func findActiveClarification(forRequestId requestId: String,
+                                 completion: @escaping (MeetingClarification?) -> Void) {
+        db.collection("meeting_clarifications")
+            .whereField("sparringRequestId", isEqualTo: requestId)
+            .whereField("status", isEqualTo: "active")
+            .limit(to: 1)
+            .getDocuments { snapshot, _ in
+                DispatchQueue.main.async {
+                    if let doc = snapshot?.documents.first {
+                        completion(MeetingClarification(id: doc.documentID, data: doc.data()))
+                    } else {
+                        completion(nil)
+                    }
+                }
+            }
     }
 }

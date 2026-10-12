@@ -25,9 +25,12 @@ struct RequestDetailView: View {
                         PlayerProfileView(userId: request.userId)
                     } label: {
                         HStack(spacing: AppSpacing.m) {
-                            Image(systemName: "person.circle.fill")
-                                .font(.system(size: AppSize.avatarMedium))
-                                .foregroundColor(AppColor.primary)
+                            InitialsAvatar(
+                                firstName: request.authorFirstName,
+                                lastName:  request.authorLastName,
+                                userId:    request.userId,
+                                size: AppSize.avatarMedium
+                            )
 
                             VStack(alignment: .leading, spacing: 2) {
                                 Text(request.authorFullName.isEmpty ? "Игрок" : request.authorFullName)

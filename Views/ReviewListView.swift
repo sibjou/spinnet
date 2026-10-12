@@ -70,9 +70,11 @@ struct ReviewsListView: View {
         VStack(alignment: .leading, spacing: AppSpacing.s) {
             HStack {
                 HStack(spacing: AppSpacing.s) {
-                    Image(systemName: "person.circle.fill")
-                        .font(.system(size: 28))
-                        .foregroundColor(AppColor.primary)
+                    InitialsAvatar(
+                        fullName: liveNames[review.fromUserId] ?? review.fromUserName,
+                        userId: review.fromUserId,
+                        size: 28
+                    )
                     // Показываем актуальное имя если подгрузили, иначе денормализованное
                     Text(liveNames[review.fromUserId] ?? review.fromUserName)
                         .font(.subheadline.bold())
@@ -137,20 +139,9 @@ struct ReviewsListView: View {
     // MARK: - Подгрузка актуальных имён авторов
     // Денормализованное имя в отзыве может устареть, поэтому берём живьём из users
     private func loadLiveNames(for reviews: [Review]) {
-        let db = Firestore.firestore()
-        let uniqueIds = Set(reviews.map { $0.fromUserId })
-
-        for id in uniqueIds {
-            db.collection("users").document(id).getDocument { doc, _ in
-                guard let data = doc?.data() else { return }
-                let firstName = data["firstName"] as? String ?? ""
-                let lastName  = data["lastName"]  as? String ?? ""
-                let name = "\(firstName) \(lastName)".trimmingCharacters(in: .whitespaces)
-                if !name.isEmpty {
-                    DispatchQueue.main.async {
-                        self.liveNames[id] = name
-                    }
-                }
+        UserService.shared.fetchNames(ids: reviews.map { $0.fromUserId }) { names in
+            for (id, name) in names where !name.isEmpty {
+                self.liveNames[id] = name
             }
         }
     }
