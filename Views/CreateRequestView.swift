@@ -115,7 +115,6 @@ struct CreateRequestView: View {
               let profile = authService.userProfile else { return }
 
         isLoading = true
-        let db = Firestore.firestore()
         let timeSlot = "\(formatTime(startTime)) – \(formatTime(endTime))"
 
         // Денормализация: сохраняем данные автора прямо в заявке
@@ -136,11 +135,9 @@ struct CreateRequestView: View {
             "createdAt":        Timestamp()
         ]
 
-        db.collection("sparring_requests").addDocument(data: data) { error in
-            DispatchQueue.main.async {
-                isLoading = false
-                if error == nil { showSuccess = true }
-            }
+        SparringService().createRequest(data: data) { success in
+            isLoading = false
+            if success { showSuccess = true }
         }
     }
 }

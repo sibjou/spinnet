@@ -18,9 +18,7 @@ struct BlockedUsersView: View {
                 List {
                     ForEach(blockedUsers, id: \.id) { user in
                         HStack {
-                            Image(systemName: "person.circle.fill")
-                                .font(.system(size: 32))
-                                .foregroundColor(.gray)
+                            InitialsAvatar(fullName: user.name, userId: user.id, size: AppSize.avatarSmall)
                             Text(user.name)
                                 .fontWeight(.medium)
                             Spacer()
@@ -71,22 +69,11 @@ struct BlockedUsersView: View {
             }
 
             // Подгружаем имена заблокированных
-            let db = Firestore.firestore()
-            let group = DispatchGroup()
-            var result: [(id: String, name: String)] = []
-
-            for id in ids {
-                group.enter()
-                db.collection("users").document(id).getDocument { doc, _ in
-                    let firstName = doc?.data()?["firstName"] as? String ?? ""
-                    let lastName  = doc?.data()?["lastName"]  as? String ?? ""
-                    let name = "\(firstName) \(lastName)".trimmingCharacters(in: .whitespaces)
-                    result.append((id: id, name: name.isEmpty ? "Игрок" : name))
-                    group.leave()
+            UserService.shared.fetchNames(ids: ids) { names in
+                let result = ids.map { id -> (id: String, name: String) in
+                    let name = names[id] ?? ""
+                    return (id: id, name: name.isEmpty ? "Игрок" : name)
                 }
-            }
-
-            group.notify(queue: .main) {
                 self.blockedUsers = result.sorted { $0.name < $1.name }
                 self.isLoading = false
             }

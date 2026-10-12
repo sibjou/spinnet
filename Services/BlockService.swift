@@ -52,13 +52,7 @@ class BlockService: ObservableObject {
             .whereField("blockedUserId", isEqualTo: myId)
             .getDocuments { [weak self] snapshot, error in
                 if let error = error {
-                    print("❌ Ошибка collectionGroup (кто меня заблокировал): \(error.localizedDescription)")
-                } else {
-                    let count = snapshot?.documents.count ?? 0
-                    print("🔵 Найдено блокировок против меня: \(count)")
-                    snapshot?.documents.forEach { doc in
-                        print("   заблокировал меня: \(doc.data()["blockedByUserId"] as? String ?? "?")")
-                    }
+                    debugLog("Ошибка collectionGroup (кто меня заблокировал): \(error.localizedDescription)")
                 }
                 let ids = snapshot?.documents.compactMap { doc -> String? in
                     doc.data()["blockedByUserId"] as? String

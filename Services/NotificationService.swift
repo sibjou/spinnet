@@ -67,7 +67,7 @@ class NotificationService: ObservableObject {
             content: content,
             trigger: trigger
         )
-        print("🔔 Игра: \(gameStart), напоминание на: \(reminderDate), сейчас: \(Date())")
+        debugLog("🔔 Игра: \(gameStart), напоминание на: \(reminderDate), сейчас: \(Date())")
         UNUserNotificationCenter.current().add(request)
     }
     
@@ -111,7 +111,7 @@ class NotificationService: ObservableObject {
             content: content,
             trigger: trigger
         )
-        print("🔔 Конец игры: \(gameEnd), оценка на: \(reminderDate), сейчас: \(Date())")
+        debugLog("🔔 Конец игры: \(gameEnd), оценка на: \(reminderDate), сейчас: \(Date())")
         UNUserNotificationCenter.current().add(request)
     }
     
@@ -143,28 +143,6 @@ class NotificationService: ObservableObject {
         )
     }
     
-    // MARK: - Тестовое уведомление (удалить после проверки)
-    func sendTestNotification() {
-        let content = UNMutableNotificationContent()
-        content.title = "Тест 🏓"
-        content.body  = "Уведомления работают!"
-        content.sound = .default
-        
-        let trigger = UNTimeIntervalNotificationTrigger(timeInterval: 5, repeats: false)
-        let request = UNNotificationRequest(
-            identifier: "test_\(UUID().uuidString)",
-            content: content,
-            trigger: trigger
-        )
-        
-        UNUserNotificationCenter.current().add(request) { error in
-            if let error = error {
-                print("❌ Ошибка уведомления: \(error)")
-            } else {
-                print("✅ Уведомление запланировано на 5 секунд")
-            }
-        }
-    }
     // MARK: - Уведомление о запросе правки отзыва
     func sendRevisionRequestNotice(reviewerName: String, reason: String) {
         let content = UNMutableNotificationContent()

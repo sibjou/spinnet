@@ -17,7 +17,7 @@ class SparringService: ObservableObject {
     
     // MARK: - Загрузка моих активных заявок
     // Заявки которые я создал и которые ещё никто не забронировал
-    func loadMyActiveRequests(userId: String) {
+    func loadMyActiveRequests(userId: String, completion: (() -> Void)? = nil) {
         db.collection("sparring_requests")
             .whereField("userId", isEqualTo: userId)
             .whereField("status", isEqualTo: "active")
@@ -28,13 +28,14 @@ class SparringService: ObservableObject {
                         data["documentId"] = doc.documentID
                         return data
                     } ?? []
+                    completion?()
                 }
             }
     }
     
     // MARK: - Загрузка забронированных игр
     // Игры где я автор заявки ИЛИ я забронировал чужую заявку
-    func loadMyBookedGames(userId: String) {
+    func loadMyBookedGames(userId: String, completion: (() -> Void)? = nil) {
         db.collection("sparring_requests")
             .whereField("userId", isEqualTo: userId)
             .whereField("status", in: ["booked", "in_progress"])
@@ -71,6 +72,7 @@ class SparringService: ObservableObject {
                                         // Планируем напоминания для всех забронированных игр на этом устройстве.
                                         // Благодаря одинаковому identifier повторный вызов перезаписывает, а не дублирует.
                                         self?.scheduleRemindersForGames(updatedGames)
+                                        completion?()
                                     }
                                 }
                             }
@@ -172,45 +174,19 @@ class SparringService: ObservableObject {
             }
     }
     
-    // MARK: - Подтвердить что встреча состоялась
-    // Оба участника подтверждают → статус меняется на completed
-    func confirmMeeting(requestId: String, userId: String, completion: @escaping (Bool) -> Void) {
-        let docRef = db.collection("sparring_requests").document(requestId)
-        
-        docRef.getDocument { doc, _ in
-            guard let data = doc?.data() else {
-                completion(false)
-                return
-            }
-            
-            // Добавляю ID подтвердившего в массив confirmedBy
-            var confirmedBy = data["confirmedBy"] as? [String] ?? []
-            if !confirmedBy.contains(userId) {
-                confirmedBy.append(userId)
-            }
-            
-            // Если оба подтвердили — статус "completed"
-            var updateData: [String: Any] = ["confirmedBy": confirmedBy]
-            if confirmedBy.count >= 2 {
-                updateData["status"] = "completed"
-                updateData["completedAt"] = Timestamp()
-            }
-            
-            docRef.updateData(updateData) { error in
-                DispatchQueue.main.async {
-                    completion(error == nil)
-                }
-            }
-        }
-    }
-    
     // MARK: - Загрузить все мои данные разом
     func loadAll(userId: String) {
         isLoading = true
-        loadMyActiveRequests(userId: userId)
-        loadMyBookedGames(userId: userId)
+        let group = DispatchGroup()
+
+        group.enter()
+        loadMyActiveRequests(userId: userId) { group.leave() }
+
+        group.enter()
+        loadMyBookedGames(userId: userId) { group.leave() }
+
         // Завершённые НЕ загружаем — только по запросу
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { [weak self] in
+        group.notify(queue: .main) { [weak self] in
             self?.isLoading = false
         }
     }
@@ -298,5 +274,60 @@ class SparringService: ObservableObject {
         group.notify(queue: .main) { [weak self] in
             self?.completedGamesCount = count1 + count2
         }
+    }
+
+    // MARK: - Одна заявка (создание, чтение, правка, удаление)
+
+    func createRequest(data: [String: Any], completion: @escaping (Bool) -> Void) {
+        db.collection("sparring_requests").addDocument(data: data) { error in
+            DispatchQueue.main.async { completion(error == nil) }
+        }
+    }
+
+    func fetchRequest(id: String, completion: @escaping ([String: Any]?) -> Void) {
+        db.collection("sparring_requests").document(id).getDocument { doc, _ in
+            DispatchQueue.main.async { completion(doc?.data()) }
+        }
+    }
+
+    func updateRequest(id: String, fields: [String: Any], completion: @escaping (Bool) -> Void) {
+        db.collection("sparring_requests").document(id).updateData(fields) { error in
+            DispatchQueue.main.async { completion(error == nil) }
+        }
+    }
+
+    func deleteRequest(id: String, completion: @escaping (Bool) -> Void) {
+        db.collection("sparring_requests").document(id).delete { error in
+            DispatchQueue.main.async { completion(error == nil) }
+        }
+    }
+
+    // MARK: - Число сыгранных игр игрока (агрегация, без загрузки документов)
+    func countCompletedGames(userId: String, completion: @escaping (Int) -> Void) {
+        let group = DispatchGroup()
+        var asAuthor = 0
+        var asPartner = 0
+
+        group.enter()
+        db.collection("sparring_requests")
+            .whereField("userId", isEqualTo: userId)
+            .whereField("status", isEqualTo: "completed")
+            .count
+            .getAggregation(source: .server) { snapshot, _ in
+                asAuthor = Int(truncating: snapshot?.count ?? 0)
+                group.leave()
+            }
+
+        group.enter()
+        db.collection("sparring_requests")
+            .whereField("bookedBy", isEqualTo: userId)
+            .whereField("status", isEqualTo: "completed")
+            .count
+            .getAggregation(source: .server) { snapshot, _ in
+                asPartner = Int(truncating: snapshot?.count ?? 0)
+                group.leave()
+            }
+
+        group.notify(queue: .main) { completion(asAuthor + asPartner) }
     }
 }

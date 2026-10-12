@@ -35,7 +35,7 @@ final class TournamentViewModel: ObservableObject {
             DispatchQueue.main.async {
                 self?.isLoading = false
                 if let error = error {
-                    print("TournamentViewModel error: \(error.localizedDescription)")
+                    debugLog("TournamentViewModel error: \(error.localizedDescription)")
                     return
                 }
                 self?.allTournaments = snapshot?.documents.map { doc in

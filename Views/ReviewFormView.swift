@@ -22,9 +22,7 @@ struct ReviewFormView: View {
 
                     // Партнёр
                     VStack(spacing: AppSpacing.s) {
-                        Image(systemName: "person.circle.fill")
-                            .font(.system(size: 60))
-                            .foregroundColor(AppColor.primary)
+                        InitialsAvatar(fullName: toUserName, userId: toUserId, size: 60)
                         Text("Как прошла игра\nс \(toUserName)?")
                             .font(.title3.bold())
                             .multilineTextAlignment(.center)

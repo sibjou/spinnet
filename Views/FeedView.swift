@@ -150,6 +150,13 @@ struct FeedView: View {
                         }
                     )
                 }
+
+                if viewModel.hasMore {
+                    Button("Показать ещё") { viewModel.loadMore() }
+                        .font(.subheadline)
+                        .foregroundColor(AppColor.primary)
+                        .padding(.vertical, AppSpacing.m)
+                }
             }
             .padding(AppSpacing.l)
         }

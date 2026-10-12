@@ -1,220 +1,197 @@
 import SwiftUI
 import FirebaseFirestore
 
-class StatusManager {
+// MARK: - StatusManager
+// Переводит заявки и турниры между статусами по времени.
+// Читает только документы, у которых дата уже наступила (status + date),
+// а не все активные документы базы. Если составной индекс ещё не создан,
+// запрос повторяется без фильтра по дате, поэтому статусы не «замирают».
+final class StatusManager {
 
     static let shared = StatusManager()
     private let db = Firestore.firestore()
 
+    /// Не чаще одного прохода в минуту: метод вызывается при запуске,
+    /// возврате в приложение и открытии профиля
+    private let minInterval: TimeInterval = 60
+    private var lastRun: Date?
+
     private init() {}
 
     func checkAllStatuses() {
-        print("StatusManager: проверяю статусы...")
-        checkSparringStatuses()
-        checkTournamentStatuses()
+        let now = Date()
+        if let lastRun, now.timeIntervalSince(lastRun) < minInterval { return }
+        lastRun = now
+
+        // Всё, что назначено на сегодня и раньше
+        let startOfTomorrow = Calendar.current.date(
+            byAdding: .day, value: 1, to: Calendar.current.startOfDay(for: now)
+        ) ?? now
+
+        checkSparringStatuses(now: now, dateBefore: startOfTomorrow)
+        checkTournamentStatuses(now: now, dateBefore: startOfTomorrow)
+    }
+
+    // MARK: - Запросы
+
+    /// Документы с нужным статусом; при `dateBefore` — только с датой раньше указанной.
+    /// Нет индекса → запасной запрос без фильтра по дате.
+    private func fetch(collection: String,
+                       status: String,
+                       dateBefore: Date?,
+                       handle: @escaping ([QueryDocumentSnapshot]) -> Void) {
+        let base = db.collection(collection).whereField("status", isEqualTo: status)
+
+        guard let dateBefore else {
+            base.getDocuments { snapshot, _ in handle(snapshot?.documents ?? []) }
+            return
+        }
+
+        base.whereField("date", isLessThan: Timestamp(date: dateBefore))
+            .getDocuments { [weak self] snapshot, error in
+                if let snapshot {
+                    handle(snapshot.documents)
+                    return
+                }
+                debugLog("StatusManager: запрос по дате не выполнен (\(error?.localizedDescription ?? "?")), читаю без фильтра")
+                self?.db.collection(collection)
+                    .whereField("status", isEqualTo: status)
+                    .getDocuments { snapshot, _ in handle(snapshot?.documents ?? []) }
+            }
     }
 
     // MARK: - Спарринги
 
-    private func checkSparringStatuses() {
-        let now = Date()
-        print("StatusManager: проверяю спарринги, текущее время: \(now)")
+    private func checkSparringStatuses(now: Date, dateBefore: Date) {
+        // active → expired
+        fetch(collection: "sparring_requests", status: "active", dateBefore: dateBefore) { [weak self] docs in
+            for doc in docs where self?.isGameTimePassed(data: doc.data(), now: now) == true {
+                doc.reference.updateData(["status": "expired"])
+            }
+        }
 
-        db.collection("sparring_requests")
-            .whereField("status", isEqualTo: "active")
-            .getDocuments { [weak self] snapshot, _ in
-                guard let documents = snapshot?.documents else { return }
-                for doc in documents {
-                    if self?.isGameTimePassed(data: doc.data(), now: now) == true {
-                        doc.reference.updateData(["status": "expired"])
-                    }
+        // booked → in_progress / completed
+        fetch(collection: "sparring_requests", status: "booked", dateBefore: dateBefore) { [weak self] docs in
+            guard let self else { return }
+            for doc in docs {
+                let data = doc.data()
+                if self.isGameTimePassed(data: data, now: now) {
+                    doc.reference.updateData(["status": "completed", "completedAt": Timestamp()])
+                } else if self.isGameInProgress(data: data, now: now) {
+                    doc.reference.updateData(["status": "in_progress"])
                 }
             }
+        }
 
-        db.collection("sparring_requests")
-            .whereField("status", isEqualTo: "booked")
-            .getDocuments { [weak self] snapshot, _ in
-                guard let documents = snapshot?.documents else { return }
-                print("StatusManager: найдено \(documents.count) забронированных заявок")
-
-                for doc in documents {
-                    let data = doc.data()
-                    let inProgress = self?.isGameInProgress(data: data, now: now) ?? false
-                    let passed = self?.isGameTimePassed(data: data, now: now) ?? false
-                    print("StatusManager: заявка \(doc.documentID) — inProgress: \(inProgress), passed: \(passed)")
-
-                    if passed {
-                        doc.reference.updateData([
-                            "status": "completed",
-                            "completedAt": Timestamp()
-                        ])
-                    } else if inProgress {
-                        doc.reference.updateData(["status": "in_progress"])
-                    }
-                }
+        // in_progress → completed (таких документов мало — фильтр по дате не нужен)
+        fetch(collection: "sparring_requests", status: "in_progress", dateBefore: nil) { [weak self] docs in
+            for doc in docs where self?.isGameTimePassed(data: doc.data(), now: now) == true {
+                doc.reference.updateData(["status": "completed", "completedAt": Timestamp()])
             }
-
-        db.collection("sparring_requests")
-            .whereField("status", isEqualTo: "in_progress")
-            .getDocuments { [weak self] snapshot, _ in
-                guard let documents = snapshot?.documents else { return }
-                for doc in documents {
-                    if self?.isGameTimePassed(data: doc.data(), now: now) == true {
-                        doc.reference.updateData([
-                            "status": "completed",
-                            "completedAt": Timestamp()
-                        ])
-                    }
-                }
-            }
+        }
     }
 
     // MARK: - Турниры
 
-    private func checkTournamentStatuses() {
-        let now = Date()
-
+    private func checkTournamentStatuses(now: Date, dateBefore: Date) {
         // upcoming → in_progress
-        db.collection("tournaments")
-            .whereField("status", isEqualTo: "upcoming")
-            .getDocuments { [weak self] snapshot, _ in
-                guard let documents = snapshot?.documents else { return }
-                for doc in documents {
-                    if self?.isTournamentStarted(data: doc.data(), now: now) == true {
-                        doc.reference.updateData(["status": "in_progress"])
-                    }
-                }
+        fetch(collection: "tournaments", status: "upcoming", dateBefore: dateBefore) { [weak self] docs in
+            for doc in docs where self?.isTournamentStarted(data: doc.data(), now: now) == true {
+                doc.reference.updateData(["status": "in_progress"])
             }
+        }
 
         // in_progress → completed
-        db.collection("tournaments")
-            .whereField("status", isEqualTo: "in_progress")
-            .getDocuments { [weak self] snapshot, _ in
-                guard let documents = snapshot?.documents else { return }
-                for doc in documents {
-                    if self?.isTournamentEnded(data: doc.data(), now: now) == true {
-                        doc.reference.updateData([
-                            "status": "completed",
-                            "completedAt": Timestamp()
-                        ])
-                    }
-                }
+        fetch(collection: "tournaments", status: "in_progress", dateBefore: nil) { [weak self] docs in
+            for doc in docs where self?.isTournamentEnded(data: doc.data(), now: now) == true {
+                doc.reference.updateData(["status": "completed", "completedAt": Timestamp()])
             }
+        }
+    }
+
+    // MARK: - Разбор времени
+
+    private static let timeFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.locale = Locale(identifier: "en_US_POSIX")
+        f.dateFormat = "HH:mm"
+        return f
+    }()
+
+    /// «HH:mm» → момент этого времени в указанный день
+    private func moment(_ time: String, on day: Date) -> Date? {
+        guard let parsed = Self.timeFormatter.date(from: time) else { return nil }
+        let calendar = Calendar.current
+        return calendar.date(
+            bySettingHour: calendar.component(.hour, from: parsed),
+            minute: calendar.component(.minute, from: parsed),
+            second: 0,
+            of: day
+        )
+    }
+
+    /// Начало и конец игры, если слот записан как «HH:mm – HH:mm»
+    private func gameInterval(data: [String: Any]) -> (day: Date, start: Date, end: Date)? {
+        guard let timestamp = data["date"] as? Timestamp,
+              let timeSlot = data["timeSlot"] as? String else { return nil }
+        let day = Calendar.current.startOfDay(for: timestamp.dateValue())
+        let parts = timeSlot.components(separatedBy: " – ")
+        guard parts.count == 2,
+              let start = moment(parts[0], on: day),
+              let end = moment(parts[1], on: day) else { return nil }
+        return (day, start, end)
     }
 
     // MARK: - Проверки времени игры
 
     private func isGameTimePassed(data: [String: Any], now: Date) -> Bool {
-        guard let dateTimestamp = data["date"] as? Timestamp,
-              let timeSlot = data["timeSlot"] as? String else { return false }
+        guard let timestamp = data["date"] as? Timestamp,
+              data["timeSlot"] is String else { return false }
 
-        let gameDate = dateTimestamp.dateValue()
-        let parts = timeSlot.components(separatedBy: " – ")
-        guard parts.count == 2 else {
-            return Calendar.current.startOfDay(for: gameDate) < Calendar.current.startOfDay(for: now)
+        if let interval = gameInterval(data: data) {
+            return now > interval.end
         }
-
-        let formatter = DateFormatter()
-        formatter.dateFormat = "HH:mm"
-        guard let endTime = formatter.date(from: parts[1]) else {
-            return Calendar.current.startOfDay(for: gameDate) < Calendar.current.startOfDay(for: now)
-        }
-
-        let calendar = Calendar.current
-        let gameDay = calendar.startOfDay(for: gameDate)
-        let endHour = calendar.component(.hour, from: endTime)
-        let endMinute = calendar.component(.minute, from: endTime)
-
-        guard let fullEndDate = calendar.date(bySettingHour: endHour, minute: endMinute, second: 0, of: gameDay) else {
-            return false
-        }
-        return now > fullEndDate
+        // Слот не разобрался — считаем игру прошедшей по дню
+        return Calendar.current.startOfDay(for: timestamp.dateValue()) < Calendar.current.startOfDay(for: now)
     }
 
     private func isGameInProgress(data: [String: Any], now: Date) -> Bool {
-        guard let dateTimestamp = data["date"] as? Timestamp,
-              let timeSlot = data["timeSlot"] as? String else { return false }
-
-        let gameDate = dateTimestamp.dateValue()
-        let calendar = Calendar.current
-        let gameDay = calendar.startOfDay(for: gameDate)
-        let today = calendar.startOfDay(for: now)
-
-        guard gameDay == today else { return false }
-
-        let parts = timeSlot.components(separatedBy: " – ")
-        guard parts.count == 2 else { return false }
-
-        let formatter = DateFormatter()
-        formatter.dateFormat = "HH:mm"
-        guard let startTime = formatter.date(from: parts[0]),
-              let endTime = formatter.date(from: parts[1]) else { return false }
-
-        let startHour = calendar.component(.hour, from: startTime)
-        let startMinute = calendar.component(.minute, from: startTime)
-        let endHour = calendar.component(.hour, from: endTime)
-        let endMinute = calendar.component(.minute, from: endTime)
-
-        guard let fullStartDate = calendar.date(bySettingHour: startHour, minute: startMinute, second: 0, of: gameDay),
-              let fullEndDate = calendar.date(bySettingHour: endHour, minute: endMinute, second: 0, of: gameDay) else {
-            return false
-        }
-        return now >= fullStartDate && now <= fullEndDate
+        guard let interval = gameInterval(data: data),
+              interval.day == Calendar.current.startOfDay(for: now) else { return false }
+        return now >= interval.start && now <= interval.end
     }
 
     // MARK: - Проверки времени турнира
 
     private func isTournamentStarted(data: [String: Any], now: Date) -> Bool {
-        guard let dateTimestamp = data["date"] as? Timestamp else { return false }
-        let tournamentDate = dateTimestamp.dateValue()
-        let calendar = Calendar.current
-        let tournamentDay = calendar.startOfDay(for: tournamentDate)
+        guard let timestamp = data["date"] as? Timestamp else { return false }
+        let day = Calendar.current.startOfDay(for: timestamp.dateValue())
 
-        if let startTimeStr = data["startTime"] as? String, !startTimeStr.isEmpty {
-            let formatter = DateFormatter()
-            formatter.dateFormat = "HH:mm"
-            if let startTime = formatter.date(from: startTimeStr) {
-                let startHour = calendar.component(.hour, from: startTime)
-                let startMinute = calendar.component(.minute, from: startTime)
-                if let fullStartDate = calendar.date(bySettingHour: startHour, minute: startMinute, second: 0, of: tournamentDay) {
-                    return now >= fullStartDate
-                }
-            }
+        if let startTime = data["startTime"] as? String, !startTime.isEmpty,
+           let start = moment(startTime, on: day) {
+            return now >= start
         }
-        return now >= tournamentDay
+        return now >= day
     }
 
-    // Турнир закончился — конец последнего дня + endTime
+    // Турнир закончился — конец последнего дня + endTime (по умолчанию 23:59)
     private func isTournamentEnded(data: [String: Any], now: Date) -> Bool {
-        // Дата окончания — endDate если есть, иначе date
-        let endDateValue: Date
-        if let endTimestamp = data["endDate"] as? Timestamp {
-            endDateValue = endTimestamp.dateValue()
-        } else if let dateTimestamp = data["date"] as? Timestamp {
-            endDateValue = dateTimestamp.dateValue()
+        let endValue: Date
+        if let end = data["endDate"] as? Timestamp {
+            endValue = end.dateValue()
+        } else if let date = data["date"] as? Timestamp {
+            endValue = date.dateValue()
         } else {
             return false
         }
 
-        let calendar = Calendar.current
-        let endDay = calendar.startOfDay(for: endDateValue)
-
-        // Время окончания — endTime если есть, иначе 23:59
-        var endHour = 23
-        var endMinute = 59
-
-        if let endTimeStr = data["endTime"] as? String, !endTimeStr.isEmpty {
-            let formatter = DateFormatter()
-            formatter.dateFormat = "HH:mm"
-            if let endTime = formatter.date(from: endTimeStr) {
-                endHour = calendar.component(.hour, from: endTime)
-                endMinute = calendar.component(.minute, from: endTime)
-            }
+        let day = Calendar.current.startOfDay(for: endValue)
+        var endMoment = moment("23:59", on: day)
+        if let endTime = data["endTime"] as? String, !endTime.isEmpty,
+           let custom = moment(endTime, on: day) {
+            endMoment = custom
         }
-
-        guard let fullEndDate = calendar.date(bySettingHour: endHour, minute: endMinute, second: 0, of: endDay) else {
-            return false
-        }
-        return now > fullEndDate
+        guard let endMoment else { return false }
+        return now > endMoment
     }
 }

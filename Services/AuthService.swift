@@ -50,6 +50,9 @@ class AuthService: ObservableObject {
                     DispatchQueue.main.async {
                         self?.isLoading = false
                         if let error = error {
+                            // Профиль не записался — удаляем только что созданный аккаунт,
+                            // иначе email окажется занятым, а войти будет нельзя
+                            result?.user.delete { _ in }
                             self?.errorMessage = self?.russianError(error)
                         } else {
                             self?.currentUserId = userId

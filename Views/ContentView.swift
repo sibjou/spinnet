@@ -1,9 +1,11 @@
 import SwiftUI
 
 struct ContentView: View {
-    @StateObject private var authService = AuthService()
+    // Единый экземпляр создаётся в SpinnetApp и приходит через окружение
+    @EnvironmentObject private var authService: AuthService
+    @Environment(\.scenePhase) private var scenePhase
     @State private var showRegister = false
-    
+
     var body: some View {
         Group {
             if authService.isLoggedIn {
@@ -19,11 +21,16 @@ struct ContentView: View {
                 showRegister = false
             }
         }
-        // При запуске и возвращении в приложение — проверяем валидность аккаунта
-        .onAppear {
-            authService.verifyCurrentUser()
-            // Проверяю статусы при каждом запуске
-            StatusManager.shared.checkAllStatuses()
+        // При запуске и возвращении в приложение — проверяем аккаунт и статусы игр
+        .onAppear { refreshOnForeground() }
+        .onChange(of: scenePhase) { _, phase in
+            if phase == .active { refreshOnForeground() }
         }
+    }
+
+    private func refreshOnForeground() {
+        guard authService.isLoggedIn else { return }
+        authService.verifyCurrentUser()
+        StatusManager.shared.checkAllStatuses()
     }
 }

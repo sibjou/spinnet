@@ -76,9 +76,12 @@ struct PlayerProfileView: View {
         VStack(spacing: 20) {
             // Аватарка и имя
             VStack(spacing: 8) {
-                Image(systemName: "person.circle.fill")
-                    .font(.system(size: 80))
-                    .foregroundColor(.green)
+                InitialsAvatar(
+                    firstName: userData["firstName"] as? String ?? "",
+                    lastName:  userData["lastName"]  as? String ?? "",
+                    userId:    userId,
+                    size: AppSize.avatarLarge
+                )
 
                 Text("\(userData["firstName"] as? String ?? "") \(userData["lastName"] as? String ?? "")")
                     .font(.title2.bold())
@@ -233,27 +236,14 @@ struct PlayerProfileView: View {
     }
 
     private func fetchProfileData() {
-        let db = Firestore.firestore()
-
-        db.collection("users").document(userId).getDocument { doc, _ in
-            DispatchQueue.main.async {
-                self.userData = doc?.data() ?? [:]
-                self.isLoading = false
-            }
+        UserService.shared.fetchUser(id: userId) { data in
+            self.userData = data ?? [:]
+            self.isLoading = false
         }
 
-        db.collection("sparring_requests")
-            .whereField("status", isEqualTo: "completed")
-            .getDocuments { snapshot, _ in
-                DispatchQueue.main.async {
-                    let count = snapshot?.documents.filter { doc in
-                        let data = doc.data()
-                        return data["userId"] as? String == userId ||
-                               data["bookedBy"] as? String == userId
-                    }.count ?? 0
-                    self.gamesCount = count
-                }
-            }
+        SparringService().countCompletedGames(userId: userId) { count in
+            self.gamesCount = count
+        }
     }
 
     // MARK: - Блокировка / Разблокировка
