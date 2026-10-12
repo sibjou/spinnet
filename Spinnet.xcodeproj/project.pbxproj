@@ -38,7 +38,6 @@
 		CB6664C32F8AA40900DB34E9 /* FeedView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB6664C12F8AA3FA00DB34E9 /* FeedView.swift */; };
 		CB6664C72F8AA42700DB34E9 /* RequestCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB6664C62F8AA42700DB34E9 /* RequestCardView.swift */; };
 		CBBD91CB2F98EB3900FBF1C0 /* EditProfileView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CBBD91CA2F98EB3000FBF1C0 /* EditProfileView.swift */; };
-		CBC19E512FB5359C00374A7C /* AppState.swift in Sources */ = {isa = PBXBuildFile; fileRef = CBC19E502FB5359400374A7C /* AppState.swift */; };
 		CBC19E532FB53F6600374A7C /* DesignSystem.swift in Sources */ = {isa = PBXBuildFile; fileRef = CBC19E522FB53F5C00374A7C /* DesignSystem.swift */; };
 		CBC19E552FB5400F00374A7C /* RequestDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CBC19E542FB5400500374A7C /* RequestDetailView.swift */; };
 		CBC19E572FB7466900374A7C /* NotificationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = CBC19E562FB7465D00374A7C /* NotificationService.swift */; };
@@ -94,7 +93,6 @@
 		CB6664C12F8AA3FA00DB34E9 /* FeedView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FeedView.swift; sourceTree = "<group>"; };
 		CB6664C62F8AA42700DB34E9 /* RequestCardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RequestCardView.swift; sourceTree = "<group>"; };
 		CBBD91CA2F98EB3000FBF1C0 /* EditProfileView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditProfileView.swift; sourceTree = "<group>"; };
-		CBC19E502FB5359400374A7C /* AppState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppState.swift; sourceTree = "<group>"; };
 		CBC19E522FB53F5C00374A7C /* DesignSystem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DesignSystem.swift; sourceTree = "<group>"; };
 		CBC19E542FB5400500374A7C /* RequestDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RequestDetailView.swift; sourceTree = "<group>"; };
 		CBC19E562FB7465D00374A7C /* NotificationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationService.swift; sourceTree = "<group>"; };
@@ -151,24 +149,9 @@
 		CBD58DAD2F8A60A500E92606 = {
 			isa = PBXGroup;
 			children = (
-				CB4E83E82FC09EE100E286A0 /* BlockUsersView.swift */,
-				CB4E83E62FC08ED700E286A0 /* BlockService.swift */,
-				CB2DD5D12FB9267C00308707 /* AppNotification.swift */,
-				CBC19E5A2FB74F8200374A7C /* ReviewService.swift */,
-				CBC19E5C2FB74FD400374A7C /* ReviewFormView.swift */,
-				CBC19E602FB7508F00374A7C /* ReviewListView.swift */,
-				CBC19E5E2FB7504500374A7C /* Review.swift */,
-				CBC19E582FB74ED000374A7C /* ContentModeration.swift */,
-				CB368E602FB4B5D300D369DC /* TimePickerSheet.swift */,
-				CBC19E522FB53F5C00374A7C /* DesignSystem.swift */,
-				CBC19E542FB5400500374A7C /* RequestDetailView.swift */,
-				CB368E662FB524AD00D369DC /* ChatListView.swift */,
-				CB368E682FB5281500D369DC /* MeetingClarification.swift */,
-				CB368E6A2FB5283B00D369DC /* ClarificationService.swift */,
-				CB368E6C2FB5285C00D369DC /* ClarificationDetailView.swift */,
-				CBC19E502FB5359400374A7C /* AppState.swift */,
-				CB368E6E2FB5288500D369DC /* ClarificationListView.swift */,
-				CB368E5A2FB4B2DF00D369DC /* SparringRequest.swift */,
+				CCF0A78A2AE84FA2007E11FF /* Models */,
+				CE4CAA91CC9F1FEEAA99021B /* ViewModels */,
+				7C1ED050191836FB7F444E0F /* DesignSystem */,
 				CBD58DE22F8A8EE800E92606 /* Views */,
 				CBD58DE12F8A8EDF00E92606 /* Services */,
 				CBD58DDE2F8A8EC600E92606 /* App */,
@@ -197,17 +180,15 @@
 		CBD58DE12F8A8EDF00E92606 /* Services */ = {
 			isa = PBXGroup;
 			children = (
-				CB368E5E2FB4B37F00D369DC /* FeedViewModel.swift */,
-				CB368E622FB4C1E500D369DC /* GameLocationLabel.swift */,
-				CB3D664F2FAE23B100542C2C /* CityData.swift */,
 				CB3849A42F8D4B89004CFA10 /* TournamentService.swift */,
 				CBD58DC72F8A70BA00E92606 /* AuthService.swift */,
 				CB55087B2F8E703800898F2B /* SparringService.swift */,
 				CB4D34132F982F840029347A /* StatusManager.swift */,
-				CB368E5C2FB4B30400D369DC /* UserProfile.swift */,
-				CB368E642FB4C4FD00D369DC /* TournamentViewModel.swift */,
 				CBC19E562FB7465D00374A7C /* NotificationService.swift */,
-				CB2DD5D32FB9272500308707 /* NotificationCenterView.swift */,
+				CB4E83E62FC08ED700E286A0 /* BlockService.swift */,
+				CB368E6A2FB5283B00D369DC /* ClarificationService.swift */,
+				CBC19E582FB74ED000374A7C /* ContentModeration.swift */,
+				CBC19E5A2FB74F8200374A7C /* ReviewService.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -236,8 +217,48 @@
 				CB3849AA2F8D4C64004CFA10 /* TournamentDetailView.swift */,
 				CB4D34112F982D190029347A /* PlayerProfileView.swift */,
 				CBC19E642FB8A35700374A7C /* AdminPanelView.swift */,
+				CB4E83E82FC09EE100E286A0 /* BlockUsersView.swift */,
+				CB368E662FB524AD00D369DC /* ChatListView.swift */,
+				CB368E6C2FB5285C00D369DC /* ClarificationDetailView.swift */,
+				CB368E6E2FB5288500D369DC /* ClarificationListView.swift */,
+				CBC19E542FB5400500374A7C /* RequestDetailView.swift */,
+				CBC19E5C2FB74FD400374A7C /* ReviewFormView.swift */,
+				CBC19E602FB7508F00374A7C /* ReviewListView.swift */,
+				CB368E602FB4B5D300D369DC /* TimePickerSheet.swift */,
+				CB2DD5D32FB9272500308707 /* NotificationCenterView.swift */,
+				CB368E622FB4C1E500D369DC /* GameLocationLabel.swift */,
 			);
 			path = Views;
+			sourceTree = "<group>";
+		};
+		CCF0A78A2AE84FA2007E11FF /* Models */ = {
+			isa = PBXGroup;
+			children = (
+				CB2DD5D12FB9267C00308707 /* AppNotification.swift */,
+				CB368E682FB5281500D369DC /* MeetingClarification.swift */,
+				CBC19E5E2FB7504500374A7C /* Review.swift */,
+				CB368E5A2FB4B2DF00D369DC /* SparringRequest.swift */,
+				CB368E5C2FB4B30400D369DC /* UserProfile.swift */,
+				CB3D664F2FAE23B100542C2C /* CityData.swift */,
+			);
+			path = Models;
+			sourceTree = "<group>";
+		};
+		CE4CAA91CC9F1FEEAA99021B /* ViewModels */ = {
+			isa = PBXGroup;
+			children = (
+				CB368E5E2FB4B37F00D369DC /* FeedViewModel.swift */,
+				CB368E642FB4C4FD00D369DC /* TournamentViewModel.swift */,
+			);
+			path = ViewModels;
+			sourceTree = "<group>";
+		};
+		7C1ED050191836FB7F444E0F /* DesignSystem */ = {
+			isa = PBXGroup;
+			children = (
+				CBC19E522FB53F5C00374A7C /* DesignSystem.swift */,
+			);
+			path = DesignSystem;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -327,7 +348,6 @@
 				CB55089C2F9150A600898F2B /* BookedGameDetailView.swift in Sources */,
 				CBC19E632FB8A2C800374A7C /* AdminConfig.swift in Sources */,
 				CB6664C32F8AA40900DB34E9 /* FeedView.swift in Sources */,
-				CBC19E512FB5359C00374A7C /* AppState.swift in Sources */,
 				CB368E652FB4C50B00D369DC /* TournamentViewModel.swift in Sources */,
 				CBD58DD62F8A71EB00E92606 /* ProfileView.swift in Sources */,
 				CBD58DD22F8A71B700E92606 /* CreateRequestView.swift in Sources */,
