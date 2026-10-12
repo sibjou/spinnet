@@ -3,189 +3,134 @@ import Combine
 import FirebaseFirestore
 import FirebaseAuth
 
-// MARK: - TournamentService
-// Отвечает за всю логику работы с турнирами:
-// создание, загрузка списка, запись участников, подтверждение явки
 class TournamentService: ObservableObject {
-    
-    @Published var tournaments: [[String: Any]] = []  // Список турниров
+
+    @Published var tournaments: [[String: Any]] = []
     @Published var isLoading = false
     @Published var errorMessage: String? = nil
-    
+
     private let db = Firestore.firestore()
-    
+
     // MARK: - Создание турнира
-        func createTournament(title: String, date: Date, startTime: String,
-                              location: String, description: String,
-                              maxParticipants: Int, organizerId: String,
-                              completion: @escaping (Bool) -> Void) {
-            
-            let data: [String: Any] = [
-                "title": title,
-                "date": Timestamp(date: date),
-                "startTime": startTime,               
-                "location": location,
-                "description": description,
-                "maxParticipants": maxParticipants,
-                "organizerId": organizerId,
-                "participants": [String](),
-                "confirmedParticipants": [String](),
-                "status": "upcoming",
-                "createdAt": Timestamp()
-            ]
-            
-            db.collection("tournaments").addDocument(data: data) { error in
-                DispatchQueue.main.async {
-                    completion(error == nil)
-                }
-            }
+    // organizerName и city — денормализованные поля, убирают N+1 запросы
+    func createTournament(title: String, date: Date, startTime: String,
+                          endDate: Date, endTime: String,
+                          city: String, location: String, description: String,
+                          maxParticipants: Int, organizerId: String,
+                          organizerName: String,
+                          completion: @escaping (Bool) -> Void) {
+
+        let data: [String: Any] = [
+            "title": title,
+            "date": Timestamp(date: date),
+            "startTime": startTime,
+            "endDate": Timestamp(date: endDate),
+            "endTime": endTime,
+            "city": city,
+            "location": location,
+            "description": description,
+            "maxParticipants": maxParticipants,
+            "organizerId": organizerId,
+            "organizerName": organizerName,
+            "participants": [String](),
+            "confirmedParticipants": [String](),
+            "status": "upcoming",
+            "createdAt": Timestamp()
+        ]
+
+        db.collection("tournaments").addDocument(data: data) { error in
+            DispatchQueue.main.async { completion(error == nil) }
         }
-        
-        // MARK: - Обновление турнира (редактирование организатором)
-        func updateTournament(tournamentId: String, title: String, date: Date,
-                              startTime: String, location: String,
-                              description: String, maxParticipants: Int,
-                              completion: @escaping (Bool) -> Void) {
-            
-            let updateData: [String: Any] = [
-                "title": title,
-                "date": Timestamp(date: date),
-                "startTime": startTime,
-                "location": location,
-                "description": description,
-                "maxParticipants": maxParticipants
-            ]
-            
-            db.collection("tournaments").document(tournamentId).updateData(updateData) { error in
-                DispatchQueue.main.async {
-                    completion(error == nil)
-                }
-            }
+    }
+
+    func updateTournament(tournamentId: String, title: String, date: Date,
+                          startTime: String, endDate: Date, endTime: String,
+                          city: String, location: String,
+                          description: String, maxParticipants: Int,
+                          completion: @escaping (Bool) -> Void) {
+
+        let updateData: [String: Any] = [
+            "title": title,
+            "date": Timestamp(date: date),
+            "startTime": startTime,
+            "endDate": Timestamp(date: endDate),
+            "endTime": endTime,
+            "city": city,
+            "location": location,
+            "description": description,
+            "maxParticipants": maxParticipants
+        ]
+
+        db.collection("tournaments").document(tournamentId).updateData(updateData) { error in
+            DispatchQueue.main.async { completion(error == nil) }
         }
-        
-        // MARK: - Удаление турнира
-        func deleteTournament(tournamentId: String, completion: @escaping (Bool) -> Void) {
-            db.collection("tournaments").document(tournamentId).delete { error in
-                DispatchQueue.main.async {
-                    completion(error == nil)
-                }
-            }
+    }
+
+    // MARK: - Удаление турнира
+    func deleteTournament(tournamentId: String, completion: @escaping (Bool) -> Void) {
+        db.collection("tournaments").document(tournamentId).delete { error in
+            DispatchQueue.main.async { completion(error == nil) }
         }
-    
-    // MARK: - Загрузка турниров
-    // Показываю индикатор загрузки только если турниров ещё нет
-        // Если уже есть — обновляю тихо, без мигания экрана
+    }
+
+    // MARK: - Загрузка турниров (без N+1)
     func loadTournaments() {
-        if tournaments.isEmpty {
-            isLoading = true
-        }
-        
-        // Загружаю и upcoming и in_progress турниры
+        if tournaments.isEmpty { isLoading = true }
+
         db.collection("tournaments")
             .whereField("status", in: ["upcoming", "in_progress"])
             .order(by: "date", descending: false)
-            .getDocuments { [weak self] snapshot, error in
+            .getDocuments { [weak self] snapshot, _ in
                 DispatchQueue.main.async {
                     self?.isLoading = false
                     guard let documents = snapshot?.documents else { return }
-                    
-                    // DispatchGroup — ждём загрузки всех имён организаторов
-                    var loadedTournaments: [[String: Any]] = documents.map { doc in
+
+                    // organizerName уже в документе — запрос в users не нужен
+                    self?.tournaments = documents.map { doc in
                         var data = doc.data()
                         data["documentId"] = doc.documentID
                         return data
                     }
-                    
-                    let group = DispatchGroup()
-                    
-                    for (index, tournament) in loadedTournaments.enumerated() {
-                        if let organizerId = tournament["organizerId"] as? String {
-                            group.enter()
-                            self?.db.collection("users").document(organizerId).getDocument { userDoc, _ in
-                                if let userData = userDoc?.data() {
-                                    let name = "\(userData["firstName"] ?? "") \(userData["lastName"] ?? "")"
-                                    loadedTournaments[index]["organizerName"] = name
-                                }
-                                group.leave()
-                            }
-                        }
-                    }
-                    
-                    group.notify(queue: .main) {
-                        self?.tournaments = loadedTournaments
-                    }
                 }
             }
     }
-    
-    // MARK: - Записаться на турнир
-    // Добавляет ID пользователя в массив participants
+
+    // MARK: - Запись / отмена участия
     func joinTournament(tournamentId: String, userId: String, completion: @escaping (Bool) -> Void) {
-        // FieldValue.arrayUnion — добавляет элемент в массив, если его там ещё нет
         db.collection("tournaments").document(tournamentId).updateData([
             "participants": FieldValue.arrayUnion([userId])
-        ]) { error in
-            DispatchQueue.main.async {
-                completion(error == nil)
-            }
-        }
+        ]) { error in DispatchQueue.main.async { completion(error == nil) } }
     }
-    
-    // MARK: - Отменить участие
+
     func leaveTournament(tournamentId: String, userId: String, completion: @escaping (Bool) -> Void) {
-        // FieldValue.arrayRemove — удаляет элемент из массива
         db.collection("tournaments").document(tournamentId).updateData([
             "participants": FieldValue.arrayRemove([userId])
-        ]) { error in
-            DispatchQueue.main.async {
-                completion(error == nil)
-            }
-        }
+        ]) { error in DispatchQueue.main.async { completion(error == nil) } }
     }
-    
-    // MARK: - Подтвердить участника (организатор)
-    // В день турнира организатор отмечает кто реально пришёл
+
+    // MARK: - Управление участниками (организатор)
     func confirmParticipant(tournamentId: String, userId: String, completion: @escaping (Bool) -> Void) {
         db.collection("tournaments").document(tournamentId).updateData([
             "confirmedParticipants": FieldValue.arrayUnion([userId])
-        ]) { error in
-            DispatchQueue.main.async {
-                completion(error == nil)
-            }
-        }
+        ]) { error in DispatchQueue.main.async { completion(error == nil) } }
     }
-    
-    // MARK: - Отменить подтверждение участника
-        func unconfirmParticipant(tournamentId: String, userId: String, completion: @escaping (Bool) -> Void) {
-            db.collection("tournaments").document(tournamentId).updateData([
-                "confirmedParticipants": FieldValue.arrayRemove([userId])
-            ]) { error in
-                DispatchQueue.main.async {
-                    completion(error == nil)
-                }
-            }
-        }
-        
-        // MARK: - Удалить участника из турнира (организатор)
-        func removeParticipant(tournamentId: String, userId: String, completion: @escaping (Bool) -> Void) {
-            db.collection("tournaments").document(tournamentId).updateData([
-                "participants": FieldValue.arrayRemove([userId]),
-                "confirmedParticipants": FieldValue.arrayRemove([userId])
-            ]) { error in
-                DispatchQueue.main.async {
-                    completion(error == nil)
-                }
-            }
-        }
-    
-    // MARK: - Завершить турнир
+
+    func unconfirmParticipant(tournamentId: String, userId: String, completion: @escaping (Bool) -> Void) {
+        db.collection("tournaments").document(tournamentId).updateData([
+            "confirmedParticipants": FieldValue.arrayRemove([userId])
+        ]) { error in DispatchQueue.main.async { completion(error == nil) } }
+    }
+
+    func removeParticipant(tournamentId: String, userId: String, completion: @escaping (Bool) -> Void) {
+        db.collection("tournaments").document(tournamentId).updateData([
+            "participants": FieldValue.arrayRemove([userId]),
+            "confirmedParticipants": FieldValue.arrayRemove([userId])
+        ]) { error in DispatchQueue.main.async { completion(error == nil) } }
+    }
+
     func completeTournament(tournamentId: String, completion: @escaping (Bool) -> Void) {
         db.collection("tournaments").document(tournamentId).updateData([
             "status": "completed"
-        ]) { error in
-            DispatchQueue.main.async {
-                completion(error == nil)
-            }
-        }
+        ]) { error in DispatchQueue.main.async { completion(error == nil) } }
     }
 }

@@ -2,76 +2,67 @@ import SwiftUI
 import FirebaseFirestore
 import FirebaseAuth
 
-// MARK: - CreateRequestView
-// Экран создания новой заявки на спарринг
 struct CreateRequestView: View {
     @ObservedObject var authService: AuthService
-    
+
     @State private var date = Calendar.current.date(byAdding: .day, value: 1, to: Date()) ?? Date()
     @State private var location = ""
+    @State private var city = ""                   // ← НОВОЕ
     @State private var startTime = Calendar.current.date(from: DateComponents(hour: 18, minute: 0)) ?? Date()
-    @State private var endTime = Calendar.current.date(from: DateComponents(hour: 20, minute: 0)) ?? Date()
+    @State private var endTime   = Calendar.current.date(from: DateComponents(hour: 20, minute: 0)) ?? Date()
     @State private var desiredLevel = "Любой"
     @State private var showSuccess = false
     @State private var isLoading = false
-    
-    // Состояния для показа пикеров времени (по одному за раз)
     @State private var showStartPicker = false
     @State private var showEndPicker = false
-    
+    @State private var showCityPicker = false      // ← НОВОЕ
+
     let levels = ["Начинающий", "Любитель", "Продвинутый", "Профессионал", "Любой"]
-    
-    var minimumDate: Date {
-        Calendar.current.startOfDay(for: Date())
-    }
-    
-    // Форматирование времени для отображения
+
+    var minimumDate: Date { Calendar.current.startOfDay(for: Date()) }
+
     private func formatTime(_ date: Date) -> String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "HH:mm"
-        return formatter.string(from: date)
+        let f = DateFormatter(); f.dateFormat = "HH:mm"; return f.string(from: date)
     }
-    
+
     var body: some View {
         NavigationStack {
             Form {
                 Section("Когда") {
-                    DatePicker("Дата",
-                               selection: $date,
-                               in: minimumDate...,
-                               displayedComponents: .date)
-                    
-                    // Начало — открывается как отдельный экран
+                    DatePicker("Дата", selection: $date, in: minimumDate..., displayedComponents: .date)
+
                     HStack {
                         Text("Начало")
                         Spacer()
-                        Button(formatTime(startTime)) {
-                            showStartPicker = true
-                        }
-                        .foregroundColor(.green)
+                        Button(formatTime(startTime)) { showStartPicker = true }
+                            .foregroundColor(.green)
                     }
-                    
-                    // Конец — открывается как отдельный экран
                     HStack {
                         Text("Конец")
                         Spacer()
-                        Button(formatTime(endTime)) {
-                            showEndPicker = true
-                        }
-                        .foregroundColor(.green)
+                        Button(formatTime(endTime)) { showEndPicker = true }
+                            .foregroundColor(.green)
                     }
                 }
-                
+
                 Section("Где") {
+                    // Город — отдельное поле для фильтрации
+                    HStack {
+                        Text("Город")
+                        Spacer()
+                        Button(city.isEmpty ? "Выбрать" : city) { showCityPicker = true }
+                            .foregroundColor(city.isEmpty ? .secondary : .primary)
+                    }
+
                     TextField("Место (клуб, адрес)", text: $location)
                 }
-                
+
                 Section("Кого ищете") {
                     Picker("Желаемый уровень партнёра", selection: $desiredLevel) {
                         ForEach(levels, id: \.self) { Text($0) }
                     }
                 }
-                // Предупреждение если время конца раньше начала
+
                 if endTime <= startTime {
                     Section {
                         Label("Время конца должно быть позже начала", systemImage: "exclamationmark.triangle.fill")
@@ -79,7 +70,7 @@ struct CreateRequestView: View {
                             .font(.caption)
                     }
                 }
-                
+
                 Section {
                     Button(action: createRequest) {
                         if isLoading {
@@ -90,87 +81,66 @@ struct CreateRequestView: View {
                                 .fontWeight(.semibold)
                         }
                     }
-                    .disabled(location.isEmpty || isLoading || endTime <= startTime)
+                    .disabled(location.isEmpty || city.isEmpty || isLoading || endTime <= startTime)
                     .foregroundColor(.white)
                     .listRowBackground(Color.green)
                 }
             }
             .navigationTitle("Новая заявка")
-            // Модальное окно для выбора начала
             .sheet(isPresented: $showStartPicker) {
                 TimePickerSheet(title: "Начало", time: $startTime, isPresented: $showStartPicker)
             }
-            // Модальное окно для выбора конца
             .sheet(isPresented: $showEndPicker) {
                 TimePickerSheet(title: "Конец", time: $endTime, isPresented: $showEndPicker)
             }
+            .sheet(isPresented: $showCityPicker) {
+                CityPickerView(selectedCity: $city, isPresented: $showCityPicker)
+            }
             .alert("Заявка опубликована!", isPresented: $showSuccess) {
-                Button("OK") {
-                    location = ""
-                }
+                Button("OK") { location = "" }
             } message: {
                 Text("Другие игроки увидят вашу заявку в ленте")
             }
+            .onAppear {
+                // Подставляем город из профиля по умолчанию
+                if city.isEmpty, let profileCity = authService.userProfile?.city {
+                    city = profileCity
+                }
+            }
         }
     }
-    
-    // MARK: - Создание заявки в Firestore
+
     private func createRequest() {
-        guard let userId = authService.currentUserId else { return }
+        guard let userId = authService.currentUserId,
+              let profile = authService.userProfile else { return }
+
         isLoading = true
-        
         let db = Firestore.firestore()
         let timeSlot = "\(formatTime(startTime)) – \(formatTime(endTime))"
-        
+
+        // Денормализация: сохраняем данные автора прямо в заявке
+        // Это убирает N+1 запросы в ленте
         let data: [String: Any] = [
-            "userId": userId,
-            "date": Timestamp(date: date),
-            "timeSlot": timeSlot,
-            "location": location,
-            "desiredLevel": desiredLevel,
-            "status": "active",
-            "createdAt": Timestamp()
+            "userId":           userId,
+            "authorFirstName":  profile.firstName,
+            "authorLastName":   profile.lastName,
+            "authorSkillLevel": profile.skillLevel,
+            "authorGrip":       profile.grip,
+            "authorPlayStyle":  profile.playStyle,
+            "date":             Timestamp(date: date),
+            "timeSlot":         timeSlot,
+            "city":             city,
+            "location":         location,
+            "desiredLevel":     desiredLevel,
+            "status":           "active",
+            "createdAt":        Timestamp()
         ]
-        
+
         db.collection("sparring_requests").addDocument(data: data) { error in
             DispatchQueue.main.async {
                 isLoading = false
-                if error == nil {
-                    showSuccess = true
-                }
+                if error == nil { showSuccess = true }
             }
         }
-    }
-}
-
-// MARK: - TimePickerSheet
-// Отдельный экран-модалка для выбора времени
-// Вынесен отдельно, чтобы избежать конфликтов DatePicker в Form
-struct TimePickerSheet: View {
-    let title: String
-    @Binding var time: Date
-    @Binding var isPresented: Bool
-    
-    var body: some View {
-        NavigationStack {
-            VStack {
-                DatePicker("",
-                           selection: $time,
-                           displayedComponents: .hourAndMinute)
-                    .datePickerStyle(.wheel)
-                    .labelsHidden()
-                    .padding()
-                Spacer()
-            }
-            .navigationTitle(title)
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Готово") { isPresented = false }
-                        .fontWeight(.semibold)
-                }
-            }
-        }
-        .presentationDetents([.height(300)])  // Высота модалки
     }
 }

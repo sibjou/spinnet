@@ -64,10 +64,13 @@ class SparringService: ObservableObject {
                                     } ?? []
                                     
                                     games.append(contentsOf: bookedByMe)
-                                    
+
                                     // Подгружаем имена партнёров
                                     self?.loadPartnerNames(games: games) { updatedGames in
                                         self?.myBookedGames = updatedGames
+                                        // Планируем напоминания для всех забронированных игр на этом устройстве.
+                                        // Благодаря одинаковому identifier повторный вызов перезаписывает, а не дублирует.
+                                        self?.scheduleRemindersForGames(updatedGames)
                                     }
                                 }
                             }
@@ -98,6 +101,38 @@ class SparringService: ObservableObject {
                 completion(updatedGames)
             }
         }
+    
+    // MARK: - Планирование напоминаний для забронированных игр
+    // Вызывается при загрузке игр. Гарантирует что оба участника
+    // (и автор, и партнёр) получат напоминания на своих устройствах,
+    // так как каждый планирует у себя при открытии приложения.
+    private func scheduleRemindersForGames(_ games: [[String: Any]]) {
+        for game in games {
+            // Планируем только для предстоящих игр (booked), не для идущих/завершённых
+            guard (game["status"] as? String) == "booked",
+                  let requestId = game["documentId"] as? String,
+                  let dateTs = game["date"] as? Timestamp,
+                  let timeSlot = game["timeSlot"] as? String else { continue }
+
+            // Имя партнёра для текста уведомления
+            let partnerName = game["partnerName"] as? String ?? "партнёром"
+
+            let gameDate = dateTs.dateValue()
+
+            NotificationService.shared.scheduleGameReminder(
+                sparringRequestId: requestId,
+                partnerName: partnerName,
+                gameDate: gameDate,
+                timeSlot: timeSlot
+            )
+            NotificationService.shared.scheduleReviewReminder(
+                sparringRequestId: requestId,
+                partnerName: partnerName,
+                gameDate: gameDate,
+                timeSlot: timeSlot
+            )
+        }
+    }
     
     // MARK: - Загрузка истории завершённых игр
     func loadMyCompletedGames(userId: String) {
@@ -174,8 +209,7 @@ class SparringService: ObservableObject {
         isLoading = true
         loadMyActiveRequests(userId: userId)
         loadMyBookedGames(userId: userId)
-        loadMyCompletedGames(userId: userId)
-        // Небольшая задержка чтобы все запросы успели завершиться
+        // Завершённые НЕ загружаем — только по запросу
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { [weak self] in
             self?.isLoading = false
         }
@@ -183,18 +217,86 @@ class SparringService: ObservableObject {
     
     // MARK: - Отмена бронирования
     // Когда один из участников отменяет — заявка возвращается в ленту
-    // со статусом "active", bookedBy удаляется
+    // со статусом "active", bookedBy удаляется.
+    // Уведомляем второго участника через систему уведомлений (Firestore + push)
     func cancelBooking(requestId: String, completion: @escaping (Bool) -> Void) {
-        let updateData: [String: Any] = [
-            "status": "active",
-            "bookedBy": FieldValue.delete(),     // Удаляю поле кто забронировал
-            "bookedAt": FieldValue.delete()      // Удаляю время бронирования
-        ]
-        
-        db.collection("sparring_requests").document(requestId).updateData(updateData) { error in
-            DispatchQueue.main.async {
-                completion(error == nil)
+
+        // Сначала получаем данные — нужны чтобы уведомить второго участника
+        db.collection("sparring_requests").document(requestId).getDocument { [weak self] doc, _ in
+            guard let data = doc?.data() else {
+                completion(false)
+                return
             }
+
+            let authorId   = data["userId"]   as? String ?? ""
+            let bookedById = data["bookedBy"] as? String ?? ""
+
+            // Определяем кого уведомлять — того, кто НЕ отменяет
+            let currentUserId = Auth.auth().currentUser?.uid ?? ""
+            let notifyUserId  = (currentUserId == authorId) ? bookedById : authorId
+
+            // Отменяем запланированные локальные уведомления
+            NotificationService.shared.cancelGameNotifications(sparringRequestId: requestId)
+
+            // Возвращаем заявку в ленту
+            let updateData: [String: Any] = [
+                "status":   "active",
+                "bookedBy": FieldValue.delete(),
+                "bookedAt": FieldValue.delete()
+            ]
+
+            self?.db.collection("sparring_requests").document(requestId).updateData(updateData) { error in
+                DispatchQueue.main.async {
+                    if error == nil && !notifyUserId.isEmpty {
+                        // Уведомление второму участнику
+                        NotificationService.shared.saveAndPush(
+                            userId: notifyUserId,
+                            type: .cancellation,
+                            title: "Бронирование отменено",
+                            body: "Партнёр отменил участие в игре. Оцените игрока — это поможет сообществу",
+                            targetType: "game",
+                            targetId: requestId
+                        )
+                    }
+                    completion(error == nil)
+                }
+            }
+        }
+    }
+    
+    // MARK: - Подсчёт завершённых игр (без загрузки)
+    // Используется для счётчика в свёрнутой секции истории
+    @Published var completedGamesCount: Int = 0
+
+    func loadCompletedGamesCount(userId: String) {
+        var count1 = 0
+        var count2 = 0
+        let group = DispatchGroup()
+
+        // Игры где я автор
+        group.enter()
+        db.collection("sparring_requests")
+            .whereField("userId", isEqualTo: userId)
+            .whereField("status", in: ["completed", "expired"])
+            .count
+            .getAggregation(source: .server) { snapshot, _ in
+                count1 = Int(truncating: snapshot?.count ?? 0)
+                group.leave()
+            }
+
+        // Игры где я партнёр (бронировал)
+        group.enter()
+        db.collection("sparring_requests")
+            .whereField("bookedBy", isEqualTo: userId)
+            .whereField("status", in: ["completed", "expired"])
+            .count
+            .getAggregation(source: .server) { snapshot, _ in
+                count2 = Int(truncating: snapshot?.count ?? 0)
+                group.leave()
+            }
+
+        group.notify(queue: .main) { [weak self] in
+            self?.completedGamesCount = count1 + count2
         }
     }
 }

@@ -1,58 +1,93 @@
 import SwiftUI
+import FirebaseFirestore
 
-// MARK: - CreateTournamentView
-// Экран создания нового турнира
 struct CreateTournamentView: View {
     @ObservedObject var authService: AuthService
     @ObservedObject var tournamentService: TournamentService
     @Binding var isPresented: Bool
-    
+
     @State private var title = ""
     @State private var date = Calendar.current.date(byAdding: .day, value: 7, to: Date()) ?? Date()
     @State private var startTime = Calendar.current.date(from: DateComponents(hour: 10, minute: 0)) ?? Date()
+    @State private var endDate = Calendar.current.date(byAdding: .day, value: 7, to: Date()) ?? Date()
+    @State private var endTime = Calendar.current.date(from: DateComponents(hour: 18, minute: 0)) ?? Date()
+    @State private var isMultiDay = false
+    @State private var city = ""
     @State private var location = ""
     @State private var description = ""
     @State private var maxParticipants = 16
     @State private var isLoading = false
     @State private var showSuccess = false
-    
     @State private var showStartPicker = false
-    
+    @State private var showEndPicker = false
+    @State private var showCityPicker = false
+
     var minimumDate: Date {
         Calendar.current.date(byAdding: .day, value: 1, to: Date()) ?? Date()
     }
-    
+
     let participantOptions = [4, 8, 12, 16, 24, 32, 64]
-    
-    // Форматирование времени для отображения
+
     private func formatTime(_ date: Date) -> String {
         let formatter = DateFormatter()
         formatter.dateFormat = "HH:mm"
         return formatter.string(from: date)
     }
-    
+
     var body: some View {
         NavigationStack {
             Form {
                 Section("Основная информация") {
                     TextField("Название турнира", text: $title)
-                    
+
                     DatePicker("Дата проведения",
                                selection: $date,
                                in: minimumDate...,
                                displayedComponents: .date)
-                    
-                    // Время начала турнира — отдельная модалка
+                        .onChange(of: date) { _, newValue in
+                            if !isMultiDay { endDate = newValue }
+                            if endDate < newValue { endDate = newValue }
+                        }
+
                     HStack {
                         Text("Время начала")
                         Spacer()
                         Button(formatTime(startTime)) { showStartPicker = true }
                             .foregroundColor(.green)
                     }
-                    
-                    TextField("Место проведения", text: $location)
+
+                    Toggle("Турнир идёт несколько дней", isOn: $isMultiDay)
+                        .tint(.green)
+                        .onChange(of: isMultiDay) { _, newValue in
+                            if !newValue { endDate = date }
+                        }
+
+                    if isMultiDay {
+                        DatePicker("Дата окончания",
+                                   selection: $endDate,
+                                   in: date...,
+                                   displayedComponents: .date)
+                    }
+
+                    HStack {
+                        Text("Время окончания")
+                        Spacer()
+                        Button(formatTime(endTime)) { showEndPicker = true }
+                            .foregroundColor(.green)
+                    }
+
+                    HStack {
+                        Text("Город")
+                        Spacer()
+                        Button(city.isEmpty ? "Выбрать" : city) {
+                            showCityPicker = true
+                        }
+                        .foregroundColor(city.isEmpty ? .secondary : .primary)
+                    }
+
+                    TextField("Место проведения (клуб, адрес)", text: $location)
                 }
-                
+
                 Section("Детали") {
                     Picker("Макс. участников", selection: $maxParticipants) {
                         ForEach(participantOptions, id: \.self) { num in
@@ -60,7 +95,7 @@ struct CreateTournamentView: View {
                         }
                     }
                 }
-                
+
                 Section {
                     TextField("Формат, правила, призы...", text: $description)
                         .onChange(of: description) { _, newValue in
@@ -74,7 +109,7 @@ struct CreateTournamentView: View {
                     Text("\(description.count)/300 символов")
                         .foregroundColor(description.count >= 280 ? .red : .secondary)
                 }
-                
+
                 Section {
                     Button(action: createTournament) {
                         if isLoading {
@@ -85,7 +120,7 @@ struct CreateTournamentView: View {
                                 .fontWeight(.semibold)
                         }
                     }
-                    .disabled(title.isEmpty || location.isEmpty || isLoading)
+                    .disabled(title.isEmpty || city.isEmpty || location.isEmpty || isLoading)
                     .foregroundColor(.white)
                     .listRowBackground(Color.green)
                 }
@@ -100,6 +135,12 @@ struct CreateTournamentView: View {
             .sheet(isPresented: $showStartPicker) {
                 TimePickerSheet(title: "Время начала", time: $startTime, isPresented: $showStartPicker)
             }
+            .sheet(isPresented: $showEndPicker) {
+                TimePickerSheet(title: "Время окончания", time: $endTime, isPresented: $showEndPicker)
+            }
+            .sheet(isPresented: $showCityPicker) {
+                CityPickerView(selectedCity: $city, isPresented: $showCityPicker)
+            }
             .alert("Турнир создан!", isPresented: $showSuccess) {
                 Button("OK") {
                     isPresented = false
@@ -108,27 +149,38 @@ struct CreateTournamentView: View {
             } message: {
                 Text("Игроки увидят ваш турнир в списке")
             }
+            .onAppear {
+                if city.isEmpty, let profileCity = authService.userProfile?.city {
+                    city = profileCity
+                }
+                endDate = date
+            }
         }
     }
-    
-    // MARK: - Создание турнира в Firestore
+
     private func createTournament() {
         guard let userId = authService.currentUserId else { return }
         isLoading = true
-        
+
+        let firstName = authService.userProfile?.firstName ?? ""
+        let lastName  = authService.userProfile?.lastName  ?? ""
+        let organizerName = "\(firstName) \(lastName)".trimmingCharacters(in: .whitespaces)
+
         tournamentService.createTournament(
             title: title,
             date: date,
             startTime: formatTime(startTime),
+            endDate: isMultiDay ? endDate : date,
+            endTime: formatTime(endTime),
+            city: city,
             location: location,
             description: description,
             maxParticipants: maxParticipants,
-            organizerId: userId
+            organizerId: userId,
+            organizerName: organizerName.isEmpty ? "Организатор" : organizerName
         ) { success in
             isLoading = false
-            if success {
-                showSuccess = true
-            }
+            if success { showSuccess = true }
         }
     }
 }

@@ -7,12 +7,29 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		CB2DD5D22FB9268500308707 /* AppNotification.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB2DD5D12FB9267C00308707 /* AppNotification.swift */; };
+		CB2DD5D42FB9273300308707 /* NotificationCenterView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB2DD5D32FB9272500308707 /* NotificationCenterView.swift */; };
+		CB368E5B2FB4B2EB00D369DC /* SparringRequest.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB368E5A2FB4B2DF00D369DC /* SparringRequest.swift */; };
+		CB368E5D2FB4B30E00D369DC /* UserProfile.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB368E5C2FB4B30400D369DC /* UserProfile.swift */; };
+		CB368E5F2FB4B38D00D369DC /* FeedViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB368E5E2FB4B37F00D369DC /* FeedViewModel.swift */; };
+		CB368E612FB4B5DD00D369DC /* TimePickerSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB368E602FB4B5D300D369DC /* TimePickerSheet.swift */; };
+		CB368E632FB4C1F200D369DC /* GameLocationLabel.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB368E622FB4C1E500D369DC /* GameLocationLabel.swift */; };
+		CB368E652FB4C50B00D369DC /* TournamentViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB368E642FB4C4FD00D369DC /* TournamentViewModel.swift */; };
+		CB368E672FB524B600D369DC /* ChatListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB368E662FB524AD00D369DC /* ChatListView.swift */; };
+		CB368E692FB5282200D369DC /* MeetingClarification.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB368E682FB5281500D369DC /* MeetingClarification.swift */; };
+		CB368E6B2FB5284900D369DC /* ClarificationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB368E6A2FB5283B00D369DC /* ClarificationService.swift */; };
+		CB368E6D2FB5286900D369DC /* ClarificationDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB368E6C2FB5285C00D369DC /* ClarificationDetailView.swift */; };
+		CB368E6F2FB5288F00D369DC /* ClarificationListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB368E6E2FB5288500D369DC /* ClarificationListView.swift */; };
 		CB3849A52F8D4B8D004CFA10 /* TournamentService.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB3849A42F8D4B89004CFA10 /* TournamentService.swift */; };
 		CB3849A72F8D4BEB004CFA10 /* TournamentListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB3849A62F8D4BDB004CFA10 /* TournamentListView.swift */; };
 		CB3849A92F8D4C43004CFA10 /* CreateTournamentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB3849A82F8D4C3F004CFA10 /* CreateTournamentView.swift */; };
 		CB3849AB2F8D4C68004CFA10 /* TournamentDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB3849AA2F8D4C64004CFA10 /* TournamentDetailView.swift */; };
+		CB3D66502FAE23C600542C2C /* CityData.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB3D664F2FAE23B100542C2C /* CityData.swift */; };
+		CB3D66522FAE23F400542C2C /* CityPickerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB3D66512FAE23E200542C2C /* CityPickerView.swift */; };
 		CB4D34122F982D2A0029347A /* PlayerProfileView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB4D34112F982D190029347A /* PlayerProfileView.swift */; };
 		CB4D34142F982F910029347A /* StatusManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB4D34132F982F840029347A /* StatusManager.swift */; };
+		CB4E83E72FC08EE300E286A0 /* BlockService.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB4E83E62FC08ED700E286A0 /* BlockService.swift */; };
+		CB4E83E92FC09EE900E286A0 /* BlockUsersView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB4E83E82FC09EE100E286A0 /* BlockUsersView.swift */; };
 		CB55087C2F8E703F00898F2B /* SparringService.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB55087B2F8E703800898F2B /* SparringService.swift */; };
 		CB55087E2F8E708000898F2B /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB55087D2F8E707700898F2B /* SettingsView.swift */; };
 		CB55089A2F9115AE00898F2B /* EditRequestView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB5508992F9115A400898F2B /* EditRequestView.swift */; };
@@ -21,6 +38,17 @@
 		CB6664C32F8AA40900DB34E9 /* FeedView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB6664C12F8AA3FA00DB34E9 /* FeedView.swift */; };
 		CB6664C72F8AA42700DB34E9 /* RequestCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB6664C62F8AA42700DB34E9 /* RequestCardView.swift */; };
 		CBBD91CB2F98EB3900FBF1C0 /* EditProfileView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CBBD91CA2F98EB3000FBF1C0 /* EditProfileView.swift */; };
+		CBC19E512FB5359C00374A7C /* AppState.swift in Sources */ = {isa = PBXBuildFile; fileRef = CBC19E502FB5359400374A7C /* AppState.swift */; };
+		CBC19E532FB53F6600374A7C /* DesignSystem.swift in Sources */ = {isa = PBXBuildFile; fileRef = CBC19E522FB53F5C00374A7C /* DesignSystem.swift */; };
+		CBC19E552FB5400F00374A7C /* RequestDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CBC19E542FB5400500374A7C /* RequestDetailView.swift */; };
+		CBC19E572FB7466900374A7C /* NotificationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = CBC19E562FB7465D00374A7C /* NotificationService.swift */; };
+		CBC19E592FB74EDF00374A7C /* ContentModeration.swift in Sources */ = {isa = PBXBuildFile; fileRef = CBC19E582FB74ED000374A7C /* ContentModeration.swift */; };
+		CBC19E5B2FB74F8F00374A7C /* ReviewService.swift in Sources */ = {isa = PBXBuildFile; fileRef = CBC19E5A2FB74F8200374A7C /* ReviewService.swift */; };
+		CBC19E5D2FB74FE100374A7C /* ReviewFormView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CBC19E5C2FB74FD400374A7C /* ReviewFormView.swift */; };
+		CBC19E5F2FB7504F00374A7C /* Review.swift in Sources */ = {isa = PBXBuildFile; fileRef = CBC19E5E2FB7504500374A7C /* Review.swift */; };
+		CBC19E612FB7509500374A7C /* ReviewListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CBC19E602FB7508F00374A7C /* ReviewListView.swift */; };
+		CBC19E632FB8A2C800374A7C /* AdminConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = CBC19E622FB8A2BC00374A7C /* AdminConfig.swift */; };
+		CBC19E652FB8A36100374A7C /* AdminPanelView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CBC19E642FB8A35700374A7C /* AdminPanelView.swift */; };
 		CBD58DC52F8A6B7A00E92606 /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = CBD58DC42F8A6B7A00E92606 /* GoogleService-Info.plist */; };
 		CBD58DC82F8A70CD00E92606 /* AuthService.swift in Sources */ = {isa = PBXBuildFile; fileRef = CBD58DC72F8A70BA00E92606 /* AuthService.swift */; };
 		CBD58DCA2F8A710300E92606 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CBD58DC92F8A70FB00E92606 /* ContentView.swift */; };
@@ -35,12 +63,29 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		CB2DD5D12FB9267C00308707 /* AppNotification.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppNotification.swift; sourceTree = "<group>"; };
+		CB2DD5D32FB9272500308707 /* NotificationCenterView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationCenterView.swift; sourceTree = "<group>"; };
+		CB368E5A2FB4B2DF00D369DC /* SparringRequest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SparringRequest.swift; sourceTree = "<group>"; };
+		CB368E5C2FB4B30400D369DC /* UserProfile.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserProfile.swift; sourceTree = "<group>"; };
+		CB368E5E2FB4B37F00D369DC /* FeedViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FeedViewModel.swift; sourceTree = "<group>"; };
+		CB368E602FB4B5D300D369DC /* TimePickerSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimePickerSheet.swift; sourceTree = "<group>"; };
+		CB368E622FB4C1E500D369DC /* GameLocationLabel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameLocationLabel.swift; sourceTree = "<group>"; };
+		CB368E642FB4C4FD00D369DC /* TournamentViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TournamentViewModel.swift; sourceTree = "<group>"; };
+		CB368E662FB524AD00D369DC /* ChatListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatListView.swift; sourceTree = "<group>"; };
+		CB368E682FB5281500D369DC /* MeetingClarification.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MeetingClarification.swift; sourceTree = "<group>"; };
+		CB368E6A2FB5283B00D369DC /* ClarificationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClarificationService.swift; sourceTree = "<group>"; };
+		CB368E6C2FB5285C00D369DC /* ClarificationDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClarificationDetailView.swift; sourceTree = "<group>"; };
+		CB368E6E2FB5288500D369DC /* ClarificationListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClarificationListView.swift; sourceTree = "<group>"; };
 		CB3849A42F8D4B89004CFA10 /* TournamentService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TournamentService.swift; sourceTree = "<group>"; };
 		CB3849A62F8D4BDB004CFA10 /* TournamentListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TournamentListView.swift; sourceTree = "<group>"; };
 		CB3849A82F8D4C3F004CFA10 /* CreateTournamentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreateTournamentView.swift; sourceTree = "<group>"; };
 		CB3849AA2F8D4C64004CFA10 /* TournamentDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TournamentDetailView.swift; sourceTree = "<group>"; };
+		CB3D664F2FAE23B100542C2C /* CityData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CityData.swift; sourceTree = "<group>"; };
+		CB3D66512FAE23E200542C2C /* CityPickerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CityPickerView.swift; sourceTree = "<group>"; };
 		CB4D34112F982D190029347A /* PlayerProfileView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlayerProfileView.swift; sourceTree = "<group>"; };
 		CB4D34132F982F840029347A /* StatusManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatusManager.swift; sourceTree = "<group>"; };
+		CB4E83E62FC08ED700E286A0 /* BlockService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BlockService.swift; sourceTree = "<group>"; };
+		CB4E83E82FC09EE100E286A0 /* BlockUsersView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BlockUsersView.swift; sourceTree = "<group>"; };
 		CB55087B2F8E703800898F2B /* SparringService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SparringService.swift; sourceTree = "<group>"; };
 		CB55087D2F8E707700898F2B /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		CB5508992F9115A400898F2B /* EditRequestView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditRequestView.swift; sourceTree = "<group>"; };
@@ -49,6 +94,17 @@
 		CB6664C12F8AA3FA00DB34E9 /* FeedView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FeedView.swift; sourceTree = "<group>"; };
 		CB6664C62F8AA42700DB34E9 /* RequestCardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RequestCardView.swift; sourceTree = "<group>"; };
 		CBBD91CA2F98EB3000FBF1C0 /* EditProfileView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditProfileView.swift; sourceTree = "<group>"; };
+		CBC19E502FB5359400374A7C /* AppState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppState.swift; sourceTree = "<group>"; };
+		CBC19E522FB53F5C00374A7C /* DesignSystem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DesignSystem.swift; sourceTree = "<group>"; };
+		CBC19E542FB5400500374A7C /* RequestDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RequestDetailView.swift; sourceTree = "<group>"; };
+		CBC19E562FB7465D00374A7C /* NotificationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationService.swift; sourceTree = "<group>"; };
+		CBC19E582FB74ED000374A7C /* ContentModeration.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentModeration.swift; sourceTree = "<group>"; };
+		CBC19E5A2FB74F8200374A7C /* ReviewService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReviewService.swift; sourceTree = "<group>"; };
+		CBC19E5C2FB74FD400374A7C /* ReviewFormView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReviewFormView.swift; sourceTree = "<group>"; };
+		CBC19E5E2FB7504500374A7C /* Review.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Review.swift; sourceTree = "<group>"; };
+		CBC19E602FB7508F00374A7C /* ReviewListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReviewListView.swift; sourceTree = "<group>"; };
+		CBC19E622FB8A2BC00374A7C /* AdminConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdminConfig.swift; sourceTree = "<group>"; };
+		CBC19E642FB8A35700374A7C /* AdminPanelView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdminPanelView.swift; sourceTree = "<group>"; };
 		CBD58DB62F8A60A500E92606 /* Spinnet.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Spinnet.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		CBD58DC42F8A6B7A00E92606 /* GoogleService-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "GoogleService-Info.plist"; sourceTree = "<group>"; };
 		CBD58DC72F8A70BA00E92606 /* AuthService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthService.swift; sourceTree = "<group>"; };
@@ -95,6 +151,24 @@
 		CBD58DAD2F8A60A500E92606 = {
 			isa = PBXGroup;
 			children = (
+				CB4E83E82FC09EE100E286A0 /* BlockUsersView.swift */,
+				CB4E83E62FC08ED700E286A0 /* BlockService.swift */,
+				CB2DD5D12FB9267C00308707 /* AppNotification.swift */,
+				CBC19E5A2FB74F8200374A7C /* ReviewService.swift */,
+				CBC19E5C2FB74FD400374A7C /* ReviewFormView.swift */,
+				CBC19E602FB7508F00374A7C /* ReviewListView.swift */,
+				CBC19E5E2FB7504500374A7C /* Review.swift */,
+				CBC19E582FB74ED000374A7C /* ContentModeration.swift */,
+				CB368E602FB4B5D300D369DC /* TimePickerSheet.swift */,
+				CBC19E522FB53F5C00374A7C /* DesignSystem.swift */,
+				CBC19E542FB5400500374A7C /* RequestDetailView.swift */,
+				CB368E662FB524AD00D369DC /* ChatListView.swift */,
+				CB368E682FB5281500D369DC /* MeetingClarification.swift */,
+				CB368E6A2FB5283B00D369DC /* ClarificationService.swift */,
+				CB368E6C2FB5285C00D369DC /* ClarificationDetailView.swift */,
+				CBC19E502FB5359400374A7C /* AppState.swift */,
+				CB368E6E2FB5288500D369DC /* ClarificationListView.swift */,
+				CB368E5A2FB4B2DF00D369DC /* SparringRequest.swift */,
 				CBD58DE22F8A8EE800E92606 /* Views */,
 				CBD58DE12F8A8EDF00E92606 /* Services */,
 				CBD58DDE2F8A8EC600E92606 /* App */,
@@ -123,10 +197,17 @@
 		CBD58DE12F8A8EDF00E92606 /* Services */ = {
 			isa = PBXGroup;
 			children = (
+				CB368E5E2FB4B37F00D369DC /* FeedViewModel.swift */,
+				CB368E622FB4C1E500D369DC /* GameLocationLabel.swift */,
+				CB3D664F2FAE23B100542C2C /* CityData.swift */,
 				CB3849A42F8D4B89004CFA10 /* TournamentService.swift */,
 				CBD58DC72F8A70BA00E92606 /* AuthService.swift */,
 				CB55087B2F8E703800898F2B /* SparringService.swift */,
 				CB4D34132F982F840029347A /* StatusManager.swift */,
+				CB368E5C2FB4B30400D369DC /* UserProfile.swift */,
+				CB368E642FB4C4FD00D369DC /* TournamentViewModel.swift */,
+				CBC19E562FB7465D00374A7C /* NotificationService.swift */,
+				CB2DD5D32FB9272500308707 /* NotificationCenterView.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -134,9 +215,11 @@
 		CBD58DE22F8A8EE800E92606 /* Views */ = {
 			isa = PBXGroup;
 			children = (
+				CB3D66512FAE23E200542C2C /* CityPickerView.swift */,
 				CBBD91CA2F98EB3000FBF1C0 /* EditProfileView.swift */,
 				CB55089D2F9256B900898F2B /* EditTournamentView.swift */,
 				CB55089B2F91509400898F2B /* BookedGameDetailView.swift */,
+				CBC19E622FB8A2BC00374A7C /* AdminConfig.swift */,
 				CB5508992F9115A400898F2B /* EditRequestView.swift */,
 				CB55087D2F8E707700898F2B /* SettingsView.swift */,
 				CB3849A82F8D4C3F004CFA10 /* CreateTournamentView.swift */,
@@ -152,6 +235,7 @@
 				CB6664C12F8AA3FA00DB34E9 /* FeedView.swift */,
 				CB3849AA2F8D4C64004CFA10 /* TournamentDetailView.swift */,
 				CB4D34112F982D190029347A /* PlayerProfileView.swift */,
+				CBC19E642FB8A35700374A7C /* AdminPanelView.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -241,21 +325,49 @@
 			files = (
 				CBD58DC82F8A70CD00E92606 /* AuthService.swift in Sources */,
 				CB55089C2F9150A600898F2B /* BookedGameDetailView.swift in Sources */,
+				CBC19E632FB8A2C800374A7C /* AdminConfig.swift in Sources */,
 				CB6664C32F8AA40900DB34E9 /* FeedView.swift in Sources */,
+				CBC19E512FB5359C00374A7C /* AppState.swift in Sources */,
+				CB368E652FB4C50B00D369DC /* TournamentViewModel.swift in Sources */,
 				CBD58DD62F8A71EB00E92606 /* ProfileView.swift in Sources */,
 				CBD58DD22F8A71B700E92606 /* CreateRequestView.swift in Sources */,
+				CBC19E592FB74EDF00374A7C /* ContentModeration.swift in Sources */,
+				CBC19E552FB5400F00374A7C /* RequestDetailView.swift in Sources */,
 				CB3849AB2F8D4C68004CFA10 /* TournamentDetailView.swift in Sources */,
+				CB368E672FB524B600D369DC /* ChatListView.swift in Sources */,
 				CB55087C2F8E703F00898F2B /* SparringService.swift in Sources */,
+				CBC19E652FB8A36100374A7C /* AdminPanelView.swift in Sources */,
+				CBC19E532FB53F6600374A7C /* DesignSystem.swift in Sources */,
 				CB55089E2F9256BC00898F2B /* EditTournamentView.swift in Sources */,
 				CBD58DCA2F8A710300E92606 /* ContentView.swift in Sources */,
+				CB3D66502FAE23C600542C2C /* CityData.swift in Sources */,
 				CB6664C72F8AA42700DB34E9 /* RequestCardView.swift in Sources */,
 				CB55087E2F8E708000898F2B /* SettingsView.swift in Sources */,
+				CB368E6D2FB5286900D369DC /* ClarificationDetailView.swift in Sources */,
+				CB2DD5D22FB9268500308707 /* AppNotification.swift in Sources */,
+				CB368E5D2FB4B30E00D369DC /* UserProfile.swift in Sources */,
 				CB3849A92F8D4C43004CFA10 /* CreateTournamentView.swift in Sources */,
 				CBD58DCE2F8A716900E92606 /* RegisterView.swift in Sources */,
 				CBBD91CB2F98EB3900FBF1C0 /* EditProfileView.swift in Sources */,
+				CB368E5F2FB4B38D00D369DC /* FeedViewModel.swift in Sources */,
+				CBC19E612FB7509500374A7C /* ReviewListView.swift in Sources */,
 				CB4D34142F982F910029347A /* StatusManager.swift in Sources */,
+				CB368E632FB4C1F200D369DC /* GameLocationLabel.swift in Sources */,
+				CB368E692FB5282200D369DC /* MeetingClarification.swift in Sources */,
+				CBC19E5D2FB74FE100374A7C /* ReviewFormView.swift in Sources */,
 				CB3849A52F8D4B8D004CFA10 /* TournamentService.swift in Sources */,
+				CBC19E5B2FB74F8F00374A7C /* ReviewService.swift in Sources */,
+				CBC19E572FB7466900374A7C /* NotificationService.swift in Sources */,
+				CB368E6B2FB5284900D369DC /* ClarificationService.swift in Sources */,
+				CB3D66522FAE23F400542C2C /* CityPickerView.swift in Sources */,
 				CB55089A2F9115AE00898F2B /* EditRequestView.swift in Sources */,
+				CB368E612FB4B5DD00D369DC /* TimePickerSheet.swift in Sources */,
+				CB368E5B2FB4B2EB00D369DC /* SparringRequest.swift in Sources */,
+				CB4E83E72FC08EE300E286A0 /* BlockService.swift in Sources */,
+				CBC19E5F2FB7504F00374A7C /* Review.swift in Sources */,
+				CB4E83E92FC09EE900E286A0 /* BlockUsersView.swift in Sources */,
+				CB2DD5D42FB9273300308707 /* NotificationCenterView.swift in Sources */,
+				CB368E6F2FB5288F00D369DC /* ClarificationListView.swift in Sources */,
 				CB4D34122F982D2A0029347A /* PlayerProfileView.swift in Sources */,
 				CBD58DD02F8A719100E92606 /* MainTabView.swift in Sources */,
 				CBD58DCC2F8A713C00E92606 /* LoginView.swift in Sources */,

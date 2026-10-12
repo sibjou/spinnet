@@ -79,7 +79,24 @@ struct TournamentDetailView: View {
                     Label("Начало в \(startTime)", systemImage: "clock")
                 }
                 
-                Label(tournament["location"] as? String ?? "", systemImage: "mappin.circle.fill")
+                GameLocationLabel(
+                    city: tournament["city"] as? String ?? "",
+                    location: tournament["location"] as? String ?? ""
+                )
+
+                Button {
+                    let city     = tournament["city"]     as? String ?? ""
+                    let location = tournament["location"] as? String ?? ""
+                    let query    = "\(city) \(location)".trimmingCharacters(in: .whitespaces)
+                    let encoded  = query.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
+                    if let url = URL(string: "maps://?q=\(encoded)") {
+                        UIApplication.shared.open(url)
+                    }
+                } label: {
+                    Label("Открыть в картах", systemImage: "map")
+                        .font(.subheadline)
+                        .foregroundColor(.blue)
+                }
                 Label("Организатор: \(tournament["organizerName"] as? String ?? "")",
                       systemImage: "person.badge.shield.checkmark")
                 Label("\(participantCount)/\(maxParticipants) участников",
@@ -94,8 +111,8 @@ struct TournamentDetailView: View {
                 }
             }
             
-            // Кнопка записи/отмены (только если я не организатор)
-            if !isOrganizer {
+            // Кнопка записи/отмены (только если я не организатор и турнир не завершён)
+            if !isOrganizer && tournament["status"] as? String != "completed" {
                 Section {
                     if isJoined {
                         Button("Отменить участие", role: .destructive) {
@@ -134,19 +151,33 @@ struct TournamentDetailView: View {
                         VStack(alignment: .leading, spacing: 8) {
                             // Имя участника — теперь кликабельное
                             HStack {
-                                NavigationLink {
-                                    PlayerProfileView(userId: participant.id)
-                                } label: {
+                                if participant.id == authService.currentUserId {
+                                    // Это я — некликабельный, с пометкой "вы"
                                     HStack {
                                         Image(systemName: "person.circle.fill")
                                             .foregroundColor(.green)
                                         Text(participant.name)
                                             .foregroundColor(.primary)
+                                        Text("(вы)")
+                                            .font(.caption)
+                                            .foregroundColor(.secondary)
+                                    }
+                                } else {
+                                    // Другой участник — кликабельный профиль
+                                    NavigationLink {
+                                        PlayerProfileView(userId: participant.id)
+                                    } label: {
+                                        HStack {
+                                            Image(systemName: "person.circle.fill")
+                                                .foregroundColor(.green)
+                                            Text(participant.name)
+                                                .foregroundColor(.primary)
+                                        }
                                     }
                                 }
-                                
+
                                 Spacer()
-                                
+
                                 // Статус подтверждения
                                 if confirmedParticipants.contains(participant.id) {
                                     HStack(spacing: 4) {
@@ -305,7 +336,13 @@ struct TournamentDetailView: View {
         }
         
         group.notify(queue: .main) {
-            self.participantNames = names
+            // Текущий пользователь всегда сверху списка
+            let myId = self.authService.currentUserId
+            self.participantNames = names.sorted { a, b in
+                if a.id == myId { return true }   // я — первый
+                if b.id == myId { return false }
+                return a.name < b.name            // остальные по алфавиту
+            }
             self.isLoadingNames = false
         }
     }
