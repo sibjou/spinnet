@@ -11,6 +11,10 @@ struct TournamentDetailView: View {
     @ObservedObject var authService: AuthService
     @ObservedObject var tournamentService: TournamentService
     
+    @State private var showEdit = false
+    @State private var showRemoveConfirm = false
+    @State private var removeParticipantId = ""
+    @State private var removeParticipantName = ""
     @State private var showAlert = false
     @State private var alertMessage = ""
     @State private var participantNames: [(id: String, name: String)] = []
@@ -69,7 +73,30 @@ struct TournamentDetailView: View {
             // Информация о турнире
             Section("Информация") {
                 Label(formattedDate, systemImage: "calendar")
-                Label(tournament["location"] as? String ?? "", systemImage: "mappin.circle.fill")
+                
+                // Время начала (если задано)
+                if let startTime = tournament["startTime"] as? String, !startTime.isEmpty {
+                    Label("Начало в \(startTime)", systemImage: "clock")
+                }
+                
+                GameLocationLabel(
+                    city: tournament["city"] as? String ?? "",
+                    location: tournament["location"] as? String ?? ""
+                )
+
+                Button {
+                    let city     = tournament["city"]     as? String ?? ""
+                    let location = tournament["location"] as? String ?? ""
+                    let query    = "\(city) \(location)".trimmingCharacters(in: .whitespaces)
+                    let encoded  = query.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
+                    if let url = URL(string: "maps://?q=\(encoded)") {
+                        UIApplication.shared.open(url)
+                    }
+                } label: {
+                    Label("Открыть в картах", systemImage: "map")
+                        .font(.subheadline)
+                        .foregroundColor(.blue)
+                }
                 Label("Организатор: \(tournament["organizerName"] as? String ?? "")",
                       systemImage: "person.badge.shield.checkmark")
                 Label("\(participantCount)/\(maxParticipants) участников",
@@ -84,8 +111,8 @@ struct TournamentDetailView: View {
                 }
             }
             
-            // Кнопка записи/отмены (только если я не организатор)
-            if !isOrganizer {
+            // Кнопка записи/отмены (только если я не организатор и турнир не завершён)
+            if !isOrganizer && tournament["status"] as? String != "completed" {
                 Section {
                     if isJoined {
                         Button("Отменить участие", role: .destructive) {
@@ -121,35 +148,102 @@ struct TournamentDetailView: View {
                         .foregroundColor(.secondary)
                 } else {
                     ForEach(participantNames, id: \.id) { participant in
-                        HStack {
-                            Image(systemName: "person.circle.fill")
-                                .foregroundColor(.green)
-                            Text(participant.name)
-                            
-                            Spacer()
-                            
-                            // Организатор видит кнопки подтверждения
-                            if isOrganizer {
-                                if confirmedParticipants.contains(participant.id) {
-                                    Image(systemName: "checkmark.circle.fill")
-                                        .foregroundColor(.green)
-                                } else {
-                                    Button("Подтвердить") {
-                                        confirmAction(userId: participant.id)
+                        VStack(alignment: .leading, spacing: 8) {
+                            // Имя участника — теперь кликабельное
+                            HStack {
+                                if participant.id == authService.currentUserId {
+                                    // Это я — некликабельный, с пометкой "вы"
+                                    HStack {
+                                        Image(systemName: "person.circle.fill")
+                                            .foregroundColor(.green)
+                                        Text(participant.name)
+                                            .foregroundColor(.primary)
+                                        Text("(вы)")
+                                            .font(.caption)
+                                            .foregroundColor(.secondary)
                                     }
-                                    .buttonStyle(.bordered)
-                                    .font(.caption)
+                                } else {
+                                    // Другой участник — кликабельный профиль
+                                    NavigationLink {
+                                        PlayerProfileView(userId: participant.id)
+                                    } label: {
+                                        HStack {
+                                            Image(systemName: "person.circle.fill")
+                                                .foregroundColor(.green)
+                                            Text(participant.name)
+                                                .foregroundColor(.primary)
+                                        }
+                                    }
+                                }
+
+                                Spacer()
+
+                                // Статус подтверждения
+                                if confirmedParticipants.contains(participant.id) {
+                                    HStack(spacing: 4) {
+                                        Image(systemName: "checkmark.circle.fill")
+                                            .foregroundColor(.green)
+                                        Text("Подтверждён")
+                                            .font(.caption)
+                                            .foregroundColor(.green)
+                                    }
+                                }
+                            }
+                            
+                            // Кнопки управления (только организатор незавершённого турнира)
+                            if isOrganizer && tournament["status"] as? String != "completed" {
+                                HStack(spacing: 12) {
+                                    if confirmedParticipants.contains(participant.id) {
+                                        Button(action: {
+                                            unconfirmAction(userId: participant.id)
+                                        }) {
+                                            Label("Отменить", systemImage: "arrow.uturn.backward")
+                                                .font(.caption)
+                                        }
+                                        .buttonStyle(.borderless)
+                                        .foregroundColor(.orange)
+                                        .disabled(isProcessing)
+                                    } else {
+                                        Button(action: {
+                                            confirmAction(userId: participant.id)
+                                        }) {
+                                            Label("Подтвердить", systemImage: "checkmark")
+                                                .font(.caption)
+                                        }
+                                        .buttonStyle(.borderless)
+                                        .foregroundColor(.green)
+                                        .disabled(isProcessing)
+                                    }
+                                    
+                                    Spacer()
+                                    
+                                    Button(action: {
+                                        removeParticipantId = participant.id
+                                        removeParticipantName = participant.name
+                                        showRemoveConfirm = true
+                                    }) {
+                                        Label("Удалить", systemImage: "xmark")
+                                            .font(.caption)
+                                    }
+                                    .buttonStyle(.borderless)
+                                    .foregroundColor(.red)
                                     .disabled(isProcessing)
                                 }
                             }
                         }
+                        .padding(.vertical, 4)
                     }
                 }
             }
             
             // Завершение турнира (только организатор)
-            if isOrganizer {
+            // Кнопки для организатора
+            if isOrganizer && tournament["status"] as? String != "completed" {
                 Section {
+                    Button(action: { showEdit = true }) {
+                        Label("Редактировать турнир", systemImage: "pencil")
+                    }
+                    
                     Button("Завершить турнир", role: .destructive) {
                         completeAction()
                     }
@@ -159,12 +253,65 @@ struct TournamentDetailView: View {
         }
         .navigationTitle(tournament["title"] as? String ?? "Турнир")
         .onAppear { loadParticipantNames() }
+        .sheet(isPresented: $showEdit) {
+            EditTournamentView(
+                tournamentId: tournament["documentId"] as? String ?? "",
+                tournamentService: tournamentService,
+                isPresented: $showEdit,
+                onUpdate: {
+                    // После редактирования — перезагружаем данные турнира
+                    reloadTournament()
+                }
+            )
+        }
+        
+        .alert("Удалить участника?", isPresented: $showRemoveConfirm) {
+            Button("Отмена", role: .cancel) {}
+            Button("Удалить", role: .destructive) {
+                removeAction(userId: removeParticipantId)
+            }
+        } message: {
+            Text("Удалить \(removeParticipantName) из турнира?")
+        }
+        
         .alert("Турнир", isPresented: $showAlert) {
             Button("OK") {}
         } message: {
             Text(alertMessage)
         }
     }
+    
+    // MARK: - Отменить подтверждение
+        private func unconfirmAction(userId: String) {
+            guard let docId = tournament["documentId"] as? String else { return }
+            isProcessing = true
+            
+            tournamentService.unconfirmParticipant(tournamentId: docId, userId: userId) { success in
+                if success {
+                    alertMessage = "Подтверждение отменено"
+                    showAlert = true
+                    reloadTournament()
+                } else {
+                    isProcessing = false
+                }
+            }
+        }
+        
+        // MARK: - Удалить участника
+        private func removeAction(userId: String) {
+            guard let docId = tournament["documentId"] as? String else { return }
+            isProcessing = true
+            
+            tournamentService.removeParticipant(tournamentId: docId, userId: userId) { success in
+                if success {
+                    alertMessage = "Участник удалён из турнира"
+                    showAlert = true
+                    reloadTournament()
+                } else {
+                    isProcessing = false
+                }
+            }
+        }
     
     // MARK: - Загружаю имена участников из базы
     private func loadParticipantNames() {
@@ -189,7 +336,13 @@ struct TournamentDetailView: View {
         }
         
         group.notify(queue: .main) {
-            self.participantNames = names
+            // Текущий пользователь всегда сверху списка
+            let myId = self.authService.currentUserId
+            self.participantNames = names.sorted { a, b in
+                if a.id == myId { return true }   // я — первый
+                if b.id == myId { return false }
+                return a.name < b.name            // остальные по алфавиту
+            }
             self.isLoadingNames = false
         }
     }

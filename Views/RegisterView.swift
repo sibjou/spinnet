@@ -6,6 +6,7 @@ struct RegisterView: View {
     @Binding var showRegister: Bool
     @ObservedObject var authService: AuthService
     
+    
     @State private var firstName = ""
     @State private var lastName = ""
     @State private var email = ""
@@ -14,6 +15,7 @@ struct RegisterView: View {
     @State private var selectedLevel = "Любитель"
     @State private var selectedGrip = "Шейкхолд"
     @State private var selectedStyle = "Комбинированный"
+    @State private var ratingLink = ""
     
     let levels = ["Начинающий", "Любитель", "Продвинутый", "Профессионал"]
     let grips = ["Шейкхолд", "Пенхолд"]
@@ -44,6 +46,17 @@ struct RegisterView: View {
                     }
                 }
                 
+                Section {
+                    TextField("https://r.ttw.ru/players/?id=...", text: $ratingLink)
+                        .keyboardType(.URL)
+                        .autocapitalization(.none)
+                } header: {
+                    Text("Рейтинг TTW (необязательно)")
+                } footer: {
+                    Text("Вставьте ссылку на ваш профиль с сайта r.ttw.ru")
+                        .font(.caption)
+                }
+                
                 // Ошибка — показываем ТОЛЬКО если она появилась на экране регистрации
                 if let error = authService.errorMessage {
                     Section {
@@ -55,11 +68,18 @@ struct RegisterView: View {
                 
                 Section {
                     Button(action: {
+                        // Валидация ссылки на рейтинг (если указана)
+                        if !ratingLink.isEmpty && !isValidRatingLink(ratingLink) {
+                            authService.errorMessage = "Ссылка должна вести на r.ttw.ru"
+                            return
+                        }
+                        
                         authService.register(
                             email: email, password: password,
                             firstName: firstName, lastName: lastName,
                             city: city, skillLevel: selectedLevel,
-                            grip: selectedGrip, playStyle: selectedStyle
+                            grip: selectedGrip, playStyle: selectedStyle,
+                            ratingLink: ratingLink
                         )
                     }) {
                         if authService.isLoading {
@@ -89,5 +109,12 @@ struct RegisterView: View {
                 authService.errorMessage = nil
             }
         }
+    }
+    // MARK: - Проверка ссылки на рейтинг
+    private func isValidRatingLink(_ link: String) -> Bool {
+        guard let url = URL(string: link),
+              let host = url.host else { return false }
+        let allowedHosts = ["r.ttw.ru", "www.r.ttw.ru"]
+        return allowedHosts.contains(host.lowercased())
     }
 }

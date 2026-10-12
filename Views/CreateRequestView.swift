@@ -2,66 +2,75 @@ import SwiftUI
 import FirebaseFirestore
 import FirebaseAuth
 
-// MARK: - CreateRequestView
-// Экран создания новой заявки на спарринг
 struct CreateRequestView: View {
     @ObservedObject var authService: AuthService
-    
-    // Дата — минимум завтра (нельзя создать заявку в прошлом)
+
     @State private var date = Calendar.current.date(byAdding: .day, value: 1, to: Date()) ?? Date()
     @State private var location = ""
+    @State private var city = ""                   // ← НОВОЕ
     @State private var startTime = Calendar.current.date(from: DateComponents(hour: 18, minute: 0)) ?? Date()
-    @State private var endTime = Calendar.current.date(from: DateComponents(hour: 20, minute: 0)) ?? Date()
+    @State private var endTime   = Calendar.current.date(from: DateComponents(hour: 20, minute: 0)) ?? Date()
     @State private var desiredLevel = "Любой"
     @State private var showSuccess = false
     @State private var isLoading = false
-    
+    @State private var showStartPicker = false
+    @State private var showEndPicker = false
+    @State private var showCityPicker = false      // ← НОВОЕ
+
     let levels = ["Начинающий", "Любитель", "Продвинутый", "Профессионал", "Любой"]
-    
-    // Минимальная дата — завтра (чтобы нельзя было создать в прошлом)
-    var minimumDate: Date {
-        Calendar.current.startOfDay(for: Date())
+
+    var minimumDate: Date { Calendar.current.startOfDay(for: Date()) }
+
+    private func formatTime(_ date: Date) -> String {
+        let f = DateFormatter(); f.dateFormat = "HH:mm"; return f.string(from: date)
     }
-    
-    // Форматирование времени для отображения
-    var timeString: String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "HH:mm"
-        let start = formatter.string(from: startTime)
-        let end = formatter.string(from: endTime)
-        return "\(start) – \(end)"
-    }
-    
+
     var body: some View {
         NavigationStack {
             Form {
                 Section("Когда") {
-                    // Выбор даты — только начиная с сегодня
-                    DatePicker("Дата",
-                               selection: $date,
-                               in: minimumDate...,  // ← Исправление бага 3: только будущие даты
-                               displayedComponents: .date)
-                    
-                    // Выбор времени начала и конца
-                    DatePicker("Начало",
-                               selection: $startTime,
-                               displayedComponents: .hourAndMinute)
-                    
-                    DatePicker("Конец",
-                               selection: $endTime,
-                               displayedComponents: .hourAndMinute)
+                    DatePicker("Дата", selection: $date, in: minimumDate..., displayedComponents: .date)
+
+                    HStack {
+                        Text("Начало")
+                        Spacer()
+                        Button(formatTime(startTime)) { showStartPicker = true }
+                            .foregroundColor(.green)
+                    }
+                    HStack {
+                        Text("Конец")
+                        Spacer()
+                        Button(formatTime(endTime)) { showEndPicker = true }
+                            .foregroundColor(.green)
+                    }
                 }
-                
+
                 Section("Где") {
+                    // Город — отдельное поле для фильтрации
+                    HStack {
+                        Text("Город")
+                        Spacer()
+                        Button(city.isEmpty ? "Выбрать" : city) { showCityPicker = true }
+                            .foregroundColor(city.isEmpty ? .secondary : .primary)
+                    }
+
                     TextField("Место (клуб, адрес)", text: $location)
                 }
-                
+
                 Section("Кого ищете") {
                     Picker("Желаемый уровень партнёра", selection: $desiredLevel) {
                         ForEach(levels, id: \.self) { Text($0) }
                     }
                 }
-                
+
+                if endTime <= startTime {
+                    Section {
+                        Label("Время конца должно быть позже начала", systemImage: "exclamationmark.triangle.fill")
+                            .foregroundColor(.red)
+                            .font(.caption)
+                    }
+                }
+
                 Section {
                     Button(action: createRequest) {
                         if isLoading {
@@ -72,50 +81,65 @@ struct CreateRequestView: View {
                                 .fontWeight(.semibold)
                         }
                     }
-                    .disabled(location.isEmpty || isLoading)
+                    .disabled(location.isEmpty || city.isEmpty || isLoading || endTime <= startTime)
                     .foregroundColor(.white)
                     .listRowBackground(Color.green)
                 }
             }
             .navigationTitle("Новая заявка")
+            .sheet(isPresented: $showStartPicker) {
+                TimePickerSheet(title: "Начало", time: $startTime, isPresented: $showStartPicker)
+            }
+            .sheet(isPresented: $showEndPicker) {
+                TimePickerSheet(title: "Конец", time: $endTime, isPresented: $showEndPicker)
+            }
+            .sheet(isPresented: $showCityPicker) {
+                CityPickerView(selectedCity: $city, isPresented: $showCityPicker)
+            }
             .alert("Заявка опубликована!", isPresented: $showSuccess) {
-                Button("OK") {
-                    location = ""
-                }
+                Button("OK") { location = "" }
             } message: {
                 Text("Другие игроки увидят вашу заявку в ленте")
             }
+            .onAppear {
+                // Подставляем город из профиля по умолчанию
+                if city.isEmpty, let profileCity = authService.userProfile?.city {
+                    city = profileCity
+                }
+            }
         }
     }
-    
-    // MARK: - Создание заявки в Firestore
+
     private func createRequest() {
-        guard let userId = authService.currentUserId else { return }
+        guard let userId = authService.currentUserId,
+              let profile = authService.userProfile else { return }
+
         isLoading = true
-        
         let db = Firestore.firestore()
-        
-        // Форматируем время для хранения
-        let formatter = DateFormatter()
-        formatter.dateFormat = "HH:mm"
-        let timeSlot = "\(formatter.string(from: startTime)) – \(formatter.string(from: endTime))"
-        
+        let timeSlot = "\(formatTime(startTime)) – \(formatTime(endTime))"
+
+        // Денормализация: сохраняем данные автора прямо в заявке
+        // Это убирает N+1 запросы в ленте
         let data: [String: Any] = [
-            "userId": userId,
-            "date": Timestamp(date: date),          // Дата игры
-            "timeSlot": timeSlot,                   // Время в формате "18:00 – 20:00"
-            "location": location,
-            "desiredLevel": desiredLevel,
-            "status": "active",
-            "createdAt": Timestamp()
+            "userId":           userId,
+            "authorFirstName":  profile.firstName,
+            "authorLastName":   profile.lastName,
+            "authorSkillLevel": profile.skillLevel,
+            "authorGrip":       profile.grip,
+            "authorPlayStyle":  profile.playStyle,
+            "date":             Timestamp(date: date),
+            "timeSlot":         timeSlot,
+            "city":             city,
+            "location":         location,
+            "desiredLevel":     desiredLevel,
+            "status":           "active",
+            "createdAt":        Timestamp()
         ]
-        
+
         db.collection("sparring_requests").addDocument(data: data) { error in
             DispatchQueue.main.async {
                 isLoading = false
-                if error == nil {
-                    showSuccess = true
-                }
+                if error == nil { showSuccess = true }
             }
         }
     }
