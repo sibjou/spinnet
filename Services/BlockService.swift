@@ -26,14 +26,59 @@ class BlockService: ObservableObject {
 
     private init() {}
 
+    // MARK: - Свежесть данных
+    // Список блокировок нужен на каждом открытии чужого профиля и при старте ленты.
+    // Каждый раз спрашивать сервер (а там два запроса, один из них по всей базе) незачем:
+    // блокировки меняются редко, а свои изменения мы и так вносим в кэш сразу.
+
+    private static let freshFor: TimeInterval = 60
+    private var loadedFor: String?
+    private var loadedAt: Date?
+
+    /// Список с телефона — чтобы лента открылась сразу, не дожидаясь сервера.
+    /// true — сохранённый список был и подставлен.
+    @discardableResult
+    func restoreCache() -> Bool {
+        guard let myId = Auth.auth().currentUser?.uid,
+              let data = UserDefaults.standard.data(forKey: BlockSnapshot.storageKey(userId: myId)),
+              let snapshot = BlockSnapshot(data: data) else { return false }
+        blockedUserIds = snapshot.blockedSet
+        blockedByUserIds = snapshot.blockedBySet
+        return true
+    }
+
+    /// Выход из аккаунта: чужие блокировки не должны остаться в памяти
+    func reset() {
+        blockedUserIds = []
+        blockedByUserIds = []
+        loadedFor = nil
+        loadedAt = nil
+    }
+
+    private func persist() {
+        guard let myId = Auth.auth().currentUser?.uid else { return }
+        let snapshot = BlockSnapshot(blocked: blockedUserIds, blockedBy: blockedByUserIds)
+        UserDefaults.standard.set(snapshot.encoded(), forKey: BlockSnapshot.storageKey(userId: myId))
+    }
+
     // MARK: - Загрузить мои блокировки (в обе стороны)
-    func loadBlocks(completion: (() -> Void)? = nil) {
+    /// Если список загружали меньше минуты назад — сразу вызывает `completion`, сеть не трогает.
+    /// `force` — перечитать в любом случае (экран «Заблокированные»).
+    func loadBlocks(force: Bool = false, completion: (() -> Void)? = nil) {
         guard let myId = Auth.auth().currentUser?.uid else {
             completion?()
             return
         }
 
+        if !force, loadedFor == myId, let loadedAt, Date().timeIntervalSince(loadedAt) < Self.freshFor {
+            completion?()
+            return
+        }
+
         let group = DispatchGroup()
+        Perf.begin("блокировки: всего")
+        Perf.begin("блокировки: кого заблокировал я")
+        Perf.begin("блокировки: кто заблокировал меня")
 
         // Кого я заблокировал
         group.enter()
@@ -41,6 +86,7 @@ class BlockService: ObservableObject {
             .getDocuments { [weak self] snapshot, _ in
                 let ids = snapshot?.documents.map { $0.documentID } ?? []
                 DispatchQueue.main.async {
+                    Perf.end("блокировки: кого заблокировал я")
                     self?.blockedUserIds = Set(ids)
                 }
                 group.leave()
@@ -58,18 +104,24 @@ class BlockService: ObservableObject {
                     doc.data()["blockedByUserId"] as? String
                 } ?? []
                 DispatchQueue.main.async {
+                    Perf.end("блокировки: кто заблокировал меня")
                     self?.blockedByUserIds = Set(ids)
                 }
                 group.leave()
             }
 
-        group.notify(queue: .main) {
+        group.notify(queue: .main) { [weak self] in
+            Perf.end("блокировки: всего")
+            self?.loadedFor = myId
+            self?.loadedAt = Date()
+            self?.persist()
             completion?()
         }
     }
 
     // MARK: - Заблокировать пользователя
     func block(userId: String, completion: @escaping (Bool) -> Void) {
+        guard ConnectionMonitor.shared.allowWrite(otherwise: completion) else { return }
         guard let myId = Auth.auth().currentUser?.uid, myId != userId else {
             completion(false)
             return
@@ -87,6 +139,7 @@ class BlockService: ObservableObject {
                 if error == nil {
                     DispatchQueue.main.async {
                         self?.blockedUserIds.insert(userId)
+                        self?.persist()
                     }
                     // Отменяем все общие забронированные игры
                     self?.cancelSharedGames(myId: myId, otherId: userId) {
@@ -100,6 +153,7 @@ class BlockService: ObservableObject {
 
     // MARK: - Разблокировать пользователя
     func unblock(userId: String, completion: @escaping (Bool) -> Void) {
+        guard ConnectionMonitor.shared.allowWrite(otherwise: completion) else { return }
         guard let myId = Auth.auth().currentUser?.uid else {
             completion(false)
             return
@@ -111,6 +165,7 @@ class BlockService: ObservableObject {
                 DispatchQueue.main.async {
                     if error == nil {
                         self?.blockedUserIds.remove(userId)
+                        self?.persist()
                     }
                     completion(error == nil)
                 }
@@ -169,13 +224,16 @@ class BlockService: ObservableObject {
                 "bookedBy": FieldValue.delete(),
                 "bookedAt": FieldValue.delete()
             ], forDocument: doc.reference)
-
-            // Также помечаем связанные уточнения удалёнными
-            let clarRef = db.collection("meeting_clarifications").document(doc.documentID)
-            batch.updateData(["status": "deleted"], forDocument: clarRef)
         }
 
-        batch.commit { _ in
+        batch.commit { [weak self] _ in
+            // Связанные уточнения помечаем удалёнными. Отдельными запросами: диалог создаётся
+            // только с первым сообщением, и если его нет, в общем пакете такая запись
+            // не нашлась бы и сорвала бы возврат игры в ленту.
+            for doc in documents {
+                self?.db.collection("meeting_clarifications").document(doc.documentID)
+                    .updateData(["status": "deleted"])
+            }
             completion()
         }
     }

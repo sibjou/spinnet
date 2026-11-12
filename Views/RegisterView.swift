@@ -16,7 +16,15 @@ struct RegisterView: View {
     @State private var selectedGrip = "Шейкхолд"
     @State private var selectedStyle = "Комбинированный"
     @State private var ratingLink = ""
-    
+    @FocusState private var focusedField: Field?
+
+    private enum Field { case firstName, lastName, email, password }
+
+    private var missingFields: [String] {
+        RegistrationRules.missing(email: email, password: password,
+                                  firstName: firstName, lastName: lastName, city: city)
+    }
+
     let levels = ["Начинающий", "Любитель", "Продвинутый", "Профессионал"]
     let grips = ["Шейкхолд", "Пенхолд"]
     let styles = ["Нападающий", "Защитник", "Комбинированный"]
@@ -24,17 +32,41 @@ struct RegisterView: View {
     var body: some View {
         NavigationStack {
             Form {
-                Section("Личные данные") {
-                    TextField("Имя", text: $firstName)
-                    TextField("Фамилия", text: $lastName)
+                Section {
                     TextField("Email", text: $email)
                         .keyboardType(.emailAddress)
-                        .autocapitalization(.none)
-                    SecureField("Пароль (минимум 6 символов)", text: $password)
-                    TextField("Город", text: $city)
+                        .textContentType(.emailAddress)
+                        .textInputAutocapitalization(.never)
+                        .autocorrectionDisabled()
+                        .focused($focusedField, equals: .email)
+                        .submitLabel(.next)
+                        .onSubmit { focusedField = .password }
+                    SecureField("Пароль", text: $password)
+                        .textContentType(.newPassword)
+                        .focused($focusedField, equals: .password)
+                        .submitLabel(.next)
+                        .onSubmit { focusedField = .firstName }
+                } header: {
+                    Text("Вход")
+                } footer: {
+                    Text("Пароль — не короче 6 символов")
                 }
-                
-                Section("Игровые параметры") {
+
+                Section("О вас") {
+                    TextField("Имя", text: $firstName)
+                        .textContentType(.givenName)
+                        .focused($focusedField, equals: .firstName)
+                        .submitLabel(.next)
+                        .onSubmit { focusedField = .lastName }
+                    TextField("Фамилия", text: $lastName)
+                        .textContentType(.familyName)
+                        .focused($focusedField, equals: .lastName)
+                        .submitLabel(.done)
+                        .onSubmit { focusedField = nil }
+                    CityRow(city: $city)
+                }
+
+                Section {
                     Picker("Уровень игры", selection: $selectedLevel) {
                         ForEach(levels, id: \.self) { Text($0) }
                     }
@@ -44,8 +76,12 @@ struct RegisterView: View {
                     Picker("Стиль игры", selection: $selectedStyle) {
                         ForEach(styles, id: \.self) { Text($0) }
                     }
+                } header: {
+                    Text("Как вы играете")
+                } footer: {
+                    Text("Это увидят партнёры в заявках. Позже можно изменить в профиле.")
                 }
-                
+
                 Section {
                     TextField("https://r.ttw.ru/players/?id=...", text: $ratingLink)
                         .keyboardType(.URL)
@@ -61,8 +97,8 @@ struct RegisterView: View {
                 if let error = authService.errorMessage {
                     Section {
                         Text(error)
-                            .foregroundColor(.red)
-                            .font(.caption)
+                            .foregroundColor(AppColor.danger)
+                            .font(.footnote)
                     }
                 }
                 
@@ -75,8 +111,9 @@ struct RegisterView: View {
                         }
                         
                         authService.register(
-                            email: email, password: password,
-                            firstName: firstName, lastName: lastName,
+                            email: email.trimmingCharacters(in: .whitespacesAndNewlines), password: password,
+                            firstName: firstName.trimmingCharacters(in: .whitespaces),
+                            lastName: lastName.trimmingCharacters(in: .whitespaces),
                             city: city, skillLevel: selectedLevel,
                             grip: selectedGrip, playStyle: selectedStyle,
                             ratingLink: ratingLink
@@ -90,9 +127,14 @@ struct RegisterView: View {
                                 .fontWeight(.semibold)
                         }
                     }
-                    .disabled(firstName.isEmpty || email.isEmpty || password.count < 6 || authService.isLoading)
+                    .disabled(!missingFields.isEmpty || authService.isLoading)
                     .foregroundColor(.white)
-                    .listRowBackground(Color.green)
+                    .listRowBackground(missingFields.isEmpty ? AppColor.primary : Color(.systemGray3))
+                } footer: {
+                    // Почему кнопка не нажимается: ровно то, чего не хватает
+                    if let hint = RegistrationRules.hint(for: missingFields) {
+                        Text(hint)
+                    }
                 }
             }
             .navigationTitle("Регистрация")

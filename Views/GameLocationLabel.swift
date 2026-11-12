@@ -9,7 +9,7 @@ struct GameLocationLabel: View {
         VStack(alignment: .leading, spacing: 2) {
             HStack(spacing: 4) {
                 Image(systemName: "mappin.circle.fill")
-                    .foregroundColor(.green)
+                    .foregroundColor(AppColor.primary)
                 Text(city.isEmpty ? "Город не указан" : city)
                     .fontWeight(.semibold)
                     .font(.subheadline)

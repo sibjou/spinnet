@@ -6,7 +6,9 @@ import SwiftUI
 struct CityPickerView: View {
     @Binding var selectedCity: String
     @Binding var isPresented: Bool
-    
+    /// Первая строка «Все города» (для ленты). В регистрации и профиле город обязателен, там строки нет.
+    var allCitiesTitle: String? = nil
+
     @State private var searchText = ""
     
     // Фильтрованные города по поисковому запросу
@@ -17,14 +19,32 @@ struct CityPickerView: View {
     var body: some View {
         NavigationStack {
             List {
+                // Без фильтра по городу (только пока ничего не ищут)
+                if let allCitiesTitle, searchText.isEmpty {
+                    Button(action: {
+                        selectedCity = allCitiesTitle
+                        isPresented = false
+                    }) {
+                        HStack {
+                            Label(allCitiesTitle, systemImage: "globe.europe.africa")
+                                .foregroundColor(.primary)
+                            Spacer()
+                            if selectedCity == allCitiesTitle {
+                                Image(systemName: "checkmark")
+                                    .foregroundColor(AppColor.primary)
+                            }
+                        }
+                    }
+                }
+
                 // Поле ручного ввода (если города нет в списке)
                 if !searchText.isEmpty && !filteredCities.contains(searchText) {
                     Button(action: {
-                        selectedCity = searchText
+                        selectedCity = CityName.canonical(searchText)
                         isPresented = false
                     }) {
                         Label("Указать: \"\(searchText)\"", systemImage: "plus.circle")
-                            .foregroundColor(.green)
+                            .foregroundColor(AppColor.primary)
                     }
                 }
                 
@@ -40,7 +60,7 @@ struct CityPickerView: View {
                             Spacer()
                             if city == selectedCity {
                                 Image(systemName: "checkmark")
-                                    .foregroundColor(.green)
+                                    .foregroundColor(AppColor.primary)
                             }
                         }
                     }
@@ -52,7 +72,6 @@ struct CityPickerView: View {
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
                     Button("Отмена") { isPresented = false }
-                        .foregroundColor(.red)
                 }
             }
         }

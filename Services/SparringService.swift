@@ -50,6 +50,8 @@ class SparringService: ObservableObject {
                             return data
                         } ?? []
                         
+                        let authorQueryLoaded = snapshot != nil
+
                         self?.db.collection("sparring_requests")
                             .whereField("bookedBy", isEqualTo: userId)
                             .whereField("status", in: ["booked", "in_progress"])
@@ -72,6 +74,13 @@ class SparringService: ObservableObject {
                                         // Планируем напоминания для всех забронированных игр на этом устройстве.
                                         // Благодаря одинаковому identifier повторный вызов перезаписывает, а не дублирует.
                                         self?.scheduleRemindersForGames(updatedGames)
+
+                                        // Игры, отменённые на другом устройстве, больше не напоминают о себе.
+                                        // Чистим только когда оба запроса отработали: иначе сбой сети стёр бы живые напоминания
+                                        if authorQueryLoaded, snapshot2 != nil {
+                                            let ids = updatedGames.compactMap { $0["documentId"] as? String }
+                                            NotificationService.shared.pruneGameReminders(keeping: Set(ids))
+                                        }
                                         completion?()
                                     }
                                 }
@@ -81,26 +90,11 @@ class SparringService: ObservableObject {
         }
         
         // MARK: - Подгрузка имён партнёров к играм
+        // Один запрос на каждые 30 разных партнёров, повторяющиеся имена берутся из памяти.
+        // Раньше было по чтению документа на каждую игру: 200 игр с десятью партнёрами = 200 запросов.
         private func loadPartnerNames(games: [[String: Any]], completion: @escaping ([[String: Any]]) -> Void) {
-            var updatedGames = games
-            let group = DispatchGroup()
-            
-            for (index, game) in games.enumerated() {
-                guard let partnerId = game["partnerId"] as? String, !partnerId.isEmpty else { continue }
-                group.enter()
-                
-                db.collection("users").document(partnerId).getDocument { doc, _ in
-                    if let data = doc?.data() {
-                        let firstName = data["firstName"] as? String ?? ""
-                        let lastName = data["lastName"] as? String ?? ""
-                        updatedGames[index]["partnerName"] = "\(firstName) \(lastName)"
-                    }
-                    group.leave()
-                }
-            }
-            
-            group.notify(queue: .main) {
-                completion(updatedGames)
+            UserService.shared.fetchNames(ids: PartnerNames.ids(in: games)) { names in
+                completion(PartnerNames.attach(names, to: games))
             }
         }
     
@@ -127,12 +121,23 @@ class SparringService: ObservableObject {
                 gameDate: gameDate,
                 timeSlot: timeSlot
             )
-            NotificationService.shared.scheduleReviewReminder(
-                sparringRequestId: requestId,
-                partnerName: partnerName,
-                gameDate: gameDate,
-                timeSlot: timeSlot
-            )
+            // Напоминания после игры ставим только до её начала: во время игры и после
+            // они уже стоят (или сработали), а внесённый счёт или отзыв их отменяет —
+            // повторная постановка вернула бы то, что человек уже сделал
+            if let start = GameSlot.startDate(day: gameDate, slot: timeSlot), start > Date() {
+                NotificationService.shared.scheduleMatchReminder(
+                    sparringRequestId: requestId,
+                    partnerName: partnerName,
+                    gameDate: gameDate,
+                    timeSlot: timeSlot
+                )
+                NotificationService.shared.scheduleReviewReminder(
+                    sparringRequestId: requestId,
+                    partnerName: partnerName,
+                    gameDate: gameDate,
+                    timeSlot: timeSlot
+                )
+            }
         }
     }
     
@@ -192,54 +197,88 @@ class SparringService: ObservableObject {
     }
     
     // MARK: - Отмена бронирования
-    // Когда один из участников отменяет — заявка возвращается в ленту
-    // со статусом "active", bookedBy удаляется.
-    // Уведомляем второго участника через систему уведомлений (Firestore + push)
+    // Партнёр отказался — заявка возвращается в ленту (status "active", bookedBy удаляется).
+    // Автор отменил — игра закрывается (status "cancelled"): иначе тот же человек мог бы
+    // снова забронировать заявку, которую автор уже не хочет проводить.
+    // Второй участник получает уведомление с именем того, кто отменил.
     func cancelBooking(requestId: String, completion: @escaping (Bool) -> Void) {
+        guard ConnectionMonitor.shared.allowWrite(otherwise: completion) else { return }
+        guard let currentUserId = Auth.auth().currentUser?.uid else {
+            completion(false)
+            return
+        }
 
-        // Сначала получаем данные — нужны чтобы уведомить второго участника
+        // Сначала читаем заявку: нужно понять, кто есть кто, и взять дату для текста
         db.collection("sparring_requests").document(requestId).getDocument { [weak self] doc, _ in
-            guard let data = doc?.data() else {
-                completion(false)
+            guard let self, let data = doc?.data() else {
+                DispatchQueue.main.async { completion(false) }
                 return
             }
 
             let authorId   = data["userId"]   as? String ?? ""
             let bookedById = data["bookedBy"] as? String ?? ""
+            let byAuthor   = currentUserId == authorId
 
-            // Определяем кого уведомлять — того, кто НЕ отменяет
-            let currentUserId = Auth.auth().currentUser?.uid ?? ""
-            let notifyUserId  = (currentUserId == authorId) ? bookedById : authorId
+            // Уведомляем того, кто НЕ отменяет
+            let notifyUserId = byAuthor ? bookedById : authorId
 
-            // Отменяем запланированные локальные уведомления
-            NotificationService.shared.cancelGameNotifications(sparringRequestId: requestId)
+            let dayText = (data["date"] as? Timestamp).map { AppDate.dayLong($0.dateValue()) } ?? ""
+            let when = NotificationTexts.when(dateText: dayText, slot: data["timeSlot"] as? String ?? "")
 
-            // Возвращаем заявку в ленту
-            let updateData: [String: Any] = [
-                "status":   "active",
-                "bookedBy": FieldValue.delete(),
-                "bookedAt": FieldValue.delete()
-            ]
+            // Имя того, кто отменяет, берём из его профиля
+            UserService.shared.fetchUser(id: currentUserId) { userData in
+                let name = UserService.fullName(from: userData ?? [:])
 
-            self?.db.collection("sparring_requests").document(requestId).updateData(updateData) { error in
-                DispatchQueue.main.async {
-                    if error == nil && !notifyUserId.isEmpty {
-                        // Уведомление второму участнику
-                        NotificationService.shared.saveAndPush(
-                            userId: notifyUserId,
-                            type: .cancellation,
-                            title: "Бронирование отменено",
-                            body: "Партнёр отменил участие в игре. Оцените игрока — это поможет сообществу",
-                            targetType: "game",
-                            targetId: requestId
-                        )
+                // Отменяем запланированные локальные уведомления на этом устройстве
+                NotificationService.shared.cancelGameNotifications(sparringRequestId: requestId)
+
+                let updateData: [String: Any]
+                if byAuthor {
+                    updateData = [
+                        "status":      "cancelled",
+                        "cancelledBy": currentUserId,
+                        "cancelledAt": Timestamp()
+                    ]
+                } else {
+                    updateData = [
+                        "status":   "active",
+                        "bookedBy": FieldValue.delete(),
+                        "bookedAt": FieldValue.delete()
+                    ]
+                }
+
+                self.db.collection("sparring_requests").document(requestId).updateData(updateData) { error in
+                    DispatchQueue.main.async {
+                        guard error == nil else {
+                            completion(false)
+                            return
+                        }
+
+                        // Диалог уточнения по этой встрече закрываем (если он был)
+                        self.db.collection("meeting_clarifications").document(requestId)
+                            .updateData(["status": "cancelled"])
+
+                        if !notifyUserId.isEmpty {
+                            let copy = NotificationTexts.cancellation(name: name, byAuthor: byAuthor, when: when)
+                            NotificationService.shared.saveAndPush(
+                                userId: notifyUserId,
+                                type: .cancellation,
+                                title: copy.title,
+                                body: copy.body,
+                                targetType: "profile",
+                                targetId: currentUserId,
+                                actorId: currentUserId,
+                                actorName: name
+                            )
+                        }
+                        completion(true)
                     }
-                    completion(error == nil)
                 }
             }
         }
     }
-    
+
+
     // MARK: - Подсчёт завершённых игр (без загрузки)
     // Используется для счётчика в свёрнутой секции истории
     @Published var completedGamesCount: Int = 0
@@ -279,6 +318,7 @@ class SparringService: ObservableObject {
     // MARK: - Одна заявка (создание, чтение, правка, удаление)
 
     func createRequest(data: [String: Any], completion: @escaping (Bool) -> Void) {
+        guard ConnectionMonitor.shared.allowWrite(otherwise: completion) else { return }
         db.collection("sparring_requests").addDocument(data: data) { error in
             DispatchQueue.main.async { completion(error == nil) }
         }
@@ -291,12 +331,14 @@ class SparringService: ObservableObject {
     }
 
     func updateRequest(id: String, fields: [String: Any], completion: @escaping (Bool) -> Void) {
+        guard ConnectionMonitor.shared.allowWrite(otherwise: completion) else { return }
         db.collection("sparring_requests").document(id).updateData(fields) { error in
             DispatchQueue.main.async { completion(error == nil) }
         }
     }
 
     func deleteRequest(id: String, completion: @escaping (Bool) -> Void) {
+        guard ConnectionMonitor.shared.allowWrite(otherwise: completion) else { return }
         db.collection("sparring_requests").document(id).delete { error in
             DispatchQueue.main.async { completion(error == nil) }
         }

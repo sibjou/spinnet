@@ -13,6 +13,8 @@ struct UserProfile {
     let ratingLink: String
     let ttwRating: Int          // ← НОВОЕ
     let createdAt: Date
+    let plan: Plan                  // тариф: free / pro (выставляет только сервер)
+    let privacy: PrivacySettings    // настройки приватности
 
     var fullName: String {
         "\(firstName) \(lastName)".trimmingCharacters(in: .whitespaces)
@@ -30,5 +32,7 @@ struct UserProfile {
         self.ratingLink   = data["ratingLink"] as? String ?? ""
         self.ttwRating    = data["ttwRating"]  as? Int ?? 0     // ← НОВОЕ
         self.createdAt    = (data["createdAt"] as? Timestamp)?.dateValue() ?? Date()
+        self.plan         = Plan(raw: data["plan"] as? String)
+        self.privacy      = PrivacySettings(userData: data)
     }
 }

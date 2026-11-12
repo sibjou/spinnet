@@ -16,6 +16,10 @@ class ReviewService: ObservableObject {
         comment: String,
         completion: @escaping (Bool, String?) -> Void
     ) {
+        guard ConnectionMonitor.shared.allowWrite() else {
+            DispatchQueue.main.async { completion(false, ConnectionRule.actionRejected) }
+            return
+        }
         // Прогоняем комментарий через модерацию
         let (cleanedComment, verdict) = ContentModeration.process(comment)
 
@@ -49,7 +53,7 @@ class ReviewService: ObservableObject {
         db.collection("reviews").document(docId).setData(data, merge: false) { error in
             DispatchQueue.main.async {
                 if let error = error {
-                    completion(false, error.localizedDescription)
+                    completion(false, UserFacingError.message(for: error, fallback: "Не удалось отправить отзыв. Попробуйте ещё раз."))
                 } else {
                     completion(true, userMessage)
                 }
@@ -109,6 +113,7 @@ class ReviewService: ObservableObject {
 
     // MARK: - Жалоба на отзыв
     func reportReview(reviewId: String, completion: @escaping (Bool) -> Void) {
+        guard ConnectionMonitor.shared.allowWrite(otherwise: completion) else { return }
         db.collection("reviews").document(reviewId).updateData([
             "reportedCount": FieldValue.increment(Int64(1))
         ]) { error in

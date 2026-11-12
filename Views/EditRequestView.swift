@@ -27,11 +27,7 @@ struct EditRequestView: View {
         Calendar.current.startOfDay(for: Date())
     }
     
-    private func formatTime(_ date: Date) -> String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "HH:mm"
-        return formatter.string(from: date)
-    }
+    private func formatTime(_ date: Date) -> String { AppDate.clock(date) }
     
     var body: some View {
         NavigationStack {
@@ -41,23 +37,20 @@ struct EditRequestView: View {
                 } else {
                     Form {
                         Section("Когда") {
-                            DatePicker("Дата",
-                                       selection: $date,
-                                       in: minimumDate...,
-                                       displayedComponents: .date)
+                            InlineDatePickerRow(title: "Дата", date: $date, minimumDate: minimumDate)
                             
                             HStack {
                                 Text("Начало")
                                 Spacer()
                                 Button(formatTime(startTime)) { showStartPicker = true }
-                                    .foregroundColor(.green)
+                                    .foregroundColor(AppColor.primary)
                             }
                             
                             HStack {
                                 Text("Конец")
                                 Spacer()
                                 Button(formatTime(endTime)) { showEndPicker = true }
-                                    .foregroundColor(.green)
+                                    .foregroundColor(AppColor.primary)
                             }
                         }
                         
@@ -80,6 +73,7 @@ struct EditRequestView: View {
                     }
                 }
             }
+            .connectionNotice()
             .navigationTitle("Редактирование")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -137,9 +131,7 @@ struct EditRequestView: View {
     
     // Вспомогательная функция: строка "18:00" → Date
     private func parseTime(_ string: String) -> Date? {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "HH:mm"
-        return formatter.date(from: string)
+        AppDate.parseClock(string)
     }
     
     // MARK: - Сохранение изменений

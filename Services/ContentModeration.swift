@@ -11,7 +11,9 @@ enum ContentModeration {
 
     // MARK: - Запрещённые слова (корни)
     // Проверяем по корням — ловит вариации
-    private static let forbiddenRoots: Set<String> = [
+
+    /// Мат, оскорбления, угрозы, дискриминация — недопустимо нигде, в том числе в переписке
+    private static let abusiveRoots: Set<String> = [
         // Мат и оскорбления
         "хуй", "хуё", "хуи", "пизд", "пизж",
         "ебан", "ебат", "ёбан", "ёбат", "ебал",
@@ -28,9 +30,12 @@ enum ContentModeration {
 
         // Дискриминация
         "хохол", "москал", "чурк", "негр",
-        "жидов", "жид ",
+        "жидов", "жид "
+    ]
 
-        // Спам и реклама
+    /// Реклама и призывы уйти в другие мессенджеры: лишнее в публичных отзывах,
+    /// но в личной переписке двух игроков это обычное дело («пиши в телеграм»)
+    private static let spamRoots: Set<String> = [
         "телеграм", "telegram", "@t.me",
         "whatsapp", "ватсап", "ватсаб", "вотсап",
         "viber", "вайбер",
@@ -38,6 +43,8 @@ enum ContentModeration {
         "vk.com", "вк.ком",
         "купи", "продам", "скидк", "акци"
     ]
+
+    private static let forbiddenRoots: Set<String> = abusiveRoots.union(spamRoots)
 
     // MARK: - Результат проверки
     enum Verdict {
@@ -57,14 +64,22 @@ enum ContentModeration {
         return (cleaned, verdict)
     }
 
+    // MARK: - Сообщение в личной переписке
+    // Только мат, угрозы и оскорбления. Контакты и ссылки не вырезаются:
+    // люди договариваются о встрече и сами решают, чем делиться.
+    static func isAcceptableMessage(_ text: String) -> Bool {
+        if case .approved = check(text, roots: abusiveRoots) { return true }
+        return false
+    }
+
     // MARK: - Проверка на запрещённые слова
-    private static func check(_ text: String) -> Verdict {
+    private static func check(_ text: String, roots: Set<String>? = nil) -> Verdict {
         if text.isEmpty { return .approved }
 
         let lower = text.lowercased()
             .replacingOccurrences(of: "ё", with: "е")  // нормализация
 
-        for root in forbiddenRoots {
+        for root in roots ?? forbiddenRoots {
             let normalizedRoot = root.replacingOccurrences(of: "ё", with: "е")
             if lower.contains(normalizedRoot) {
                 return .needsReview(reason: "Обнаружены недопустимые выражения")

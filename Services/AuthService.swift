@@ -13,13 +13,17 @@ class AuthService: ObservableObject {
 
     private let db = Firestore.firestore()
 
+    /// Проверка аккаунта не чаще раза в полминуты: на запуске её просят сразу несколько мест
+    private var accountCheck = RefreshPolicy(minInterval: 30)
+
     init() {
         if let user = Auth.auth().currentUser {
             self.isLoggedIn = true
             self.currentUserId = user.uid
+            // Одно чтение документа: оно и проверяет, что аккаунт жив, и заполняет профиль
             verifyCurrentUser()
-            loadUserProfile(userId: user.uid)     // загружаем профиль при старте
         }
+        Perf.mark("вход: состояние определено")
     }
 
     // MARK: - Регистрация
@@ -41,7 +45,7 @@ class AuthService: ObservableObject {
 
                 let userData: [String: Any] = [
                     "firstName": firstName, "lastName": lastName, "email": email,
-                    "city": city, "skillLevel": skillLevel, "grip": grip,
+                    "city": CityName.canonical(city), "skillLevel": skillLevel, "grip": grip,
                     "playStyle": playStyle, "ratingLink": ratingLink,
                     "createdAt": Timestamp()
                 ]
@@ -88,6 +92,11 @@ class AuthService: ObservableObject {
     // MARK: - Выход
 
     func logout() {
+        // Отметка «не в сети» должна уйти, пока вход ещё не снят
+        PresenceService.shared.goOffline(userId: currentUserId)
+        BlockService.shared.reset()
+        UserService.shared.clearNameCache()
+        accountCheck.reset()
         try? Auth.auth().signOut()
         isLoggedIn = false
         currentUserId = nil
@@ -130,11 +139,19 @@ class AuthService: ObservableObject {
         }
     }
 
-    func verifyCurrentUser() {
-        guard let userId = currentUserId else { return }
+    /// Аккаунт на месте? Если профиль удалён — выходим. Тем же чтением обновляется `userProfile`.
+    /// Без сети документ не приходит вовсе (`exists` остаётся nil) — тогда ничего не трогаем.
+    func verifyCurrentUser(force: Bool = false) {
+        guard let userId = currentUserId, accountCheck.shouldRun(force: force) else { return }
         db.collection("users").document(userId).getDocument { [weak self] doc, _ in
             DispatchQueue.main.async {
-                if doc?.exists == false { self?.logout() }
+                guard let self, self.currentUserId == userId else { return }
+                if doc?.exists == false {
+                    self.logout()
+                } else if let data = doc?.data() {
+                    self.userProfile = UserProfile(id: userId, data: data)
+                    Perf.mark("профиль пользователя загружен")
+                }
             }
         }
     }

@@ -9,10 +9,7 @@ struct RequestDetailView: View {
     @Environment(\.dismiss) var dismiss
 
     private var formattedDate: String {
-        let f = DateFormatter()
-        f.locale = Locale(identifier: "ru_RU")
-        f.dateFormat = "d MMMM yyyy, EEEE"
-        return f.string(from: request.date)
+        AppDate.fullWithWeekday(request.date)
     }
 
     var body: some View {
@@ -93,6 +90,7 @@ struct RequestDetailView: View {
                 }
                 .padding(AppSpacing.l)
             }
+            .connectionNotice()
             .navigationTitle("Заявка")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {

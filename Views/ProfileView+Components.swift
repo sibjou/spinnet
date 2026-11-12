@@ -37,34 +37,39 @@ extension ProfileView {
         .buttonStyle(.plain)
     }
 
-    // Пустое состояние с иконкой и поясняющим текстом
-    func emptyState(icon: String, title: String, subtitle: String) -> some View {
-        VStack(spacing: AppSpacing.m) {
-            Image(systemName: icon)
-                .font(.system(size: 44))
-                .foregroundColor(AppColor.textTertiary)
-            Text(title)
-                .font(.headline)
-                .foregroundColor(AppColor.textSecondary)
-            Text(subtitle)
-                .font(.subheadline)
-                .foregroundColor(AppColor.textTertiary)
-                .multilineTextAlignment(.center)
-        }
+    // Пустое состояние: значок, объяснение и, если есть куда пойти, кнопка
+    func emptyState(icon: String,
+                    title: String,
+                    subtitle: String,
+                    actionTitle: String? = nil,
+                    action: (() -> Void)? = nil) -> some View {
+        EmptyStateView(
+            art: .symbol(icon),
+            title: title,
+            message: subtitle,
+            primaryTitle: actionTitle,
+            primaryAction: action
+        )
         .frame(maxWidth: .infinity)
-        .padding(.vertical, AppSpacing.xxl)
+        .padding(.vertical, AppSpacing.xl)
     }
 
     // MARK: - Бейдж статуса игры
 
+    // Цвет — точка, слова — обычным чёрным: читается на любом фоне, и статус понятен без цвета
     func statusBadge(_ status: String) -> some View {
-        Text(statusText(status))
-            .font(.caption.bold())
-            .foregroundColor(statusColor(status))
-            .padding(.horizontal, AppSpacing.s)
-            .padding(.vertical, 4)
-            .background(statusColor(status).opacity(0.12))
-            .cornerRadius(AppRadius.small)
+        HStack(spacing: 5) {
+            Circle()
+                .fill(statusColor(status))
+                .frame(width: 7, height: 7)
+            Text(statusText(status))
+                .font(.caption.weight(.semibold))
+                .foregroundColor(AppColor.textPrimary)
+        }
+        .padding(.horizontal, AppSpacing.s)
+        .padding(.vertical, 4)
+        .background(statusColor(status).opacity(0.12))
+        .cornerRadius(AppRadius.small)
     }
 
     // Перевод статуса на русский
@@ -79,14 +84,15 @@ extension ProfileView {
         }
     }
 
-    // Цвет статуса по смыслу: зелёный=активная, синий=инфо, оранжевый=внимание, красный=ошибка
+    // Цвет статуса по смыслу: синий=ждёт игрока, бирюзовый=игра назначена, оранжевый=идёт, серый=закончено.
+    // Красного нет: истёкшая заявка — не ошибка
     func statusColor(_ status: String) -> Color {
         switch status {
         case "active":      return AppColor.primary
         case "booked":      return AppColor.info
         case "in_progress": return AppColor.warning
         case "completed":   return AppColor.textSecondary
-        case "expired":     return AppColor.danger
+        case "expired":     return AppColor.textSecondary
         default:            return AppColor.textSecondary
         }
     }

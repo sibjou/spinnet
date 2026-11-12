@@ -8,18 +8,23 @@ struct TournamentListView: View {
 
     @State private var showCreateTournament = false
     @State private var showCityPicker = false
+    @EnvironmentObject private var appState: AppState
+    // Вкладка остаётся в памяти; свежий список подгружается, если с прошлой загрузки прошло больше минуты
+    @State private var loadPolicy = RefreshPolicy(minInterval: 60)
 
     var body: some View {
         NavigationStack {
             Group {
-                if viewModel.isLoading && viewModel.displayedTournaments.isEmpty {
-                    ProgressView("Загрузка турниров...")
+                if !viewModel.hasLoadedOnce && viewModel.displayedTournaments.isEmpty {
+                    RefreshableState { LoadingStateView(title: "Загружаем турниры…") }
                 } else if viewModel.displayedTournaments.isEmpty {
-                    emptyState
+                    // В обёртке, чтобы пустой экран тоже можно было потянуть вниз
+                    RefreshableState { emptyState }
                 } else {
                     tournamentList
                 }
             }
+            .tabBarInset()
             .navigationTitle("Турниры")
             .toolbar { toolbarContent }
             .sheet(isPresented: $showCreateTournament) {
@@ -30,13 +35,22 @@ struct TournamentListView: View {
                 )
             }
             .sheet(isPresented: $showCityPicker) {
-                CityPickerView(selectedCity: $viewModel.filterCity, isPresented: $showCityPicker)
+                CityPickerView(selectedCity: $viewModel.filterCity, isPresented: $showCityPicker, allCitiesTitle: "Все города")
             }
-            .task { viewModel.loadFromServer() }
-            .refreshable { viewModel.loadFromServer() }
+            .task {
+                if loadPolicy.shouldRun() { viewModel.loadFromServer() }
+            }
+            .onChange(of: appState.selectedTab) { _, tab in
+                if tab == .tournaments, loadPolicy.shouldRun() { viewModel.loadFromServer() }
+            }
+            .refreshable { await viewModel.refresh() }
+            // Записались, отменили запись, завершили турнир на его странице — в списке счётчики должны обновиться
+            .onChange(of: tournamentService.changeCounter) { _, _ in
+                if loadPolicy.shouldRun(force: true) { viewModel.loadFromServer() }
+            }
             // После создания турнира — перезагружаем
             .onChange(of: showCreateTournament) { _, isShowing in
-                if !isShowing { viewModel.loadFromServer() }
+                if !isShowing, loadPolicy.shouldRun(force: true) { viewModel.loadFromServer() }
             }
         }
     }
@@ -46,17 +60,16 @@ struct TournamentListView: View {
     private var tournamentList: some View {
         ScrollView {
             LazyVStack(spacing: AppSpacing.m) {
-                ForEach(viewModel.displayedTournaments.indices, id: \.self) { index in
-                    let tournament = viewModel.displayedTournaments[index]
+                ForEach(viewModel.displayedTournaments) { item in
                     NavigationLink {
                         TournamentDetailView(
-                            tournament: tournament,
+                            tournament: item.data,
                             authService: authService,
                             tournamentService: tournamentService
                         )
                     } label: {
                         TournamentCardView(
-                            tournament: tournament,
+                            tournament: item.data,
                             currentUserId: authService.currentUserId
                         )
                     }
@@ -70,22 +83,23 @@ struct TournamentListView: View {
     // MARK: - Пустое состояние
 
     private var emptyState: some View {
-        VStack(spacing: 12) {
-            Image(systemName: "trophy")
-                .font(.system(size: 50))
-                .foregroundColor(.gray)
-
+        Group {
             if viewModel.hasActiveFilters {
-                Text("Нет турниров по выбранным фильтрам")
-                    .foregroundColor(.secondary)
-                Button("Сбросить фильтры") { viewModel.resetFilters() }
-                    .foregroundColor(.green)
+                EmptyStateView(
+                    art: .symbol("trophy"),
+                    title: "Нет турниров по выбранным фильтрам",
+                    message: "Попробуйте другой город или снимите фильтры",
+                    primaryTitle: "Сбросить фильтры",
+                    primaryAction: { viewModel.resetFilters() }
+                )
             } else {
-                Text("Пока нет турниров")
-                    .foregroundColor(.secondary)
-                Text("Создайте первый!")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
+                EmptyStateView(
+                    art: .symbol("trophy"),
+                    title: "Пока нет турниров",
+                    message: "Станьте первым: соберите игроков вашего города на турнир",
+                    primaryTitle: "Создать турнир",
+                    primaryAction: { showCreateTournament = true }
+                )
             }
         }
     }
@@ -112,7 +126,7 @@ struct TournamentListView: View {
                 }
             } label: {
                 Image(systemName: "line.3.horizontal.decrease.circle")
-                    .foregroundColor(viewModel.hasActiveFilters ? .green : .primary)
+                    .foregroundColor(viewModel.hasActiveFilters ? AppColor.primary : .primary)
             }
         }
     }
@@ -123,10 +137,7 @@ struct TournamentListView: View {
 
         var formattedDate: String {
             guard let timestamp = tournament["date"] as? Timestamp else { return "" }
-            let f = DateFormatter()
-            f.locale = Locale(identifier: "ru_RU")
-            f.dateFormat = "d MMM"
-            return f.string(from: timestamp.dateValue())
+            return AppDate.dayShort(timestamp.dateValue())
         }
 
         var participantCount: Int { (tournament["participants"] as? [String])?.count ?? 0 }
@@ -239,23 +250,30 @@ struct TournamentListView: View {
         // MARK: - Статус-бейдж
         @ViewBuilder
         private var statusBadge: some View {
+            // Красный — для ошибок. «Мест нет» — обычное состояние, поэтому спокойный серый
             if let status = tournament["status"] as? String, status == "in_progress" {
                 badge(text: "Идёт", color: AppColor.warning)
             } else if isFull {
-                badge(text: "Мест нет", color: AppColor.danger)
+                badge(text: "Мест нет", color: Color(.systemGray2))
             } else {
-                badge(text: "Открыт", color: AppColor.primary)
+                badge(text: "Открыт", color: AppColor.success)
             }
         }
 
+        /// Цветная точка и текст обычным цветом: статус читается и без различения оттенков
         private func badge(text: String, color: Color) -> some View {
-            Text(text)
-                .font(.caption.bold())
-                .foregroundColor(color)
-                .padding(.horizontal, AppSpacing.s)
-                .padding(.vertical, 4)
-                .background(color.opacity(0.12))
-                .cornerRadius(AppRadius.small)
+            HStack(spacing: 5) {
+                Circle()
+                    .fill(color)
+                    .frame(width: 7, height: 7)
+                Text(text)
+                    .font(.caption.bold())
+                    .foregroundColor(AppColor.textPrimary)
+            }
+            .padding(.horizontal, AppSpacing.s + 2)
+            .padding(.vertical, 5)
+            .background(Color(.systemBackground))
+            .clipShape(Capsule())
         }
 
         private var progressRatio: CGFloat {
@@ -264,7 +282,7 @@ struct TournamentListView: View {
         }
 
         private var progressColor: Color {
-            if progressRatio >= 1.0 { return AppColor.danger }
+            if progressRatio >= 1.0 { return Color(.systemGray2) }
             if progressRatio >= 0.75 { return AppColor.warning }
             return AppColor.primary
         }

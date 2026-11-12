@@ -31,6 +31,12 @@ struct SettingsView: View {
                 // MARK: - Конфиденциальность и безопасность
                 Section("Конфиденциальность и безопасность") {
                     NavigationLink {
+                        PrivacySettingsView(authService: authService)
+                    } label: {
+                        Label("Приватность профиля", systemImage: "lock.shield")
+                    }
+
+                    NavigationLink {
                         BlockedUsersView()
                     } label: {
                         Label("Заблокированные пользователи", systemImage: "hand.raised")
@@ -73,22 +79,30 @@ struct SettingsView: View {
                     HStack {
                         Label("Версия", systemImage: "info.circle")
                         Spacer()
-                        Text(appVersion).foregroundColor(.secondary)
+                        Text(appVersion).foregroundColor(AppColor.textSecondary)
                     }
                     // Политика и Условия — пока заглушки, добавим ссылки перед публикацией
                     // Link("Политика конфиденциальности", destination: URL(string: "https://spinnet.app/privacy")!)
                     // Link("Условия использования", destination: URL(string: "https://spinnet.app/terms")!)
                 }
 
-                // MARK: - Выход
+                // MARK: - Выход и удаление
                 Section {
                     Button(role: .destructive) {
                         showLogoutConfirm = true
                     } label: {
                         Label("Выйти из аккаунта", systemImage: "rectangle.portrait.and.arrow.right")
                     }
+
+                    NavigationLink {
+                        DeleteAccountView(authService: authService)
+                    } label: {
+                        Label("Удалить аккаунт", systemImage: "trash")
+                            .foregroundColor(AppColor.danger)
+                    }
                 }
             }
+            .connectionNotice()
             .navigationTitle("Настройки")
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {

@@ -64,7 +64,20 @@
 		CBD58DD92F8A730F00E92606 /* FirebaseAuth in Frameworks */ = {isa = PBXBuildFile; productRef = CBD58DD82F8A730F00E92606 /* FirebaseAuth */; };
 		CBD58DDB2F8A731900E92606 /* FirebaseFirestore in Frameworks */ = {isa = PBXBuildFile; productRef = CBD58DDA2F8A731900E92606 /* FirebaseFirestore */; };
 		CBD58DDD2F8A732800E92606 /* FirebaseAnalytics in Frameworks */ = {isa = PBXBuildFile; productRef = CBD58DDC2F8A732800E92606 /* FirebaseAnalytics */; };
+		CBE5A1002FC600010E92B102 /* DeleteAccountView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CBE5A1002FC600010E92B101 /* DeleteAccountView.swift */; };
+		CBE5A1002FC600010E92B104 /* MeetingClarification+Draft.swift in Sources */ = {isa = PBXBuildFile; fileRef = CBE5A1002FC600010E92B103 /* MeetingClarification+Draft.swift */; };
+		CBE5A1002FC600010E92B106 /* AccountDeletionService.swift in Sources */ = {isa = PBXBuildFile; fileRef = CBE5A1002FC600010E92B105 /* AccountDeletionService.swift */; };
 /* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		CBE5A1002FC500010E92B004 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = CBD58DAE2F8A60A500E92606 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = CBD58DB52F8A60A500E92606;
+			remoteInfo = Spinnet;
+		};
+/* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
 		CB2DD5D12FB9267C00308707 /* AppNotification.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppNotification.swift; sourceTree = "<group>"; };
@@ -114,6 +127,7 @@
 		CBC19E622FB8A2BC00374A7C /* AdminConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdminConfig.swift; sourceTree = "<group>"; };
 		CBC19E642FB8A35700374A7C /* AdminPanelView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdminPanelView.swift; sourceTree = "<group>"; };
 		CBD58DB62F8A60A500E92606 /* Spinnet.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Spinnet.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		CBE5A1002FC500010E92B003 /* SpinnetTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = SpinnetTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		CBD58DC42F8A6B7A00E92606 /* GoogleService-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "GoogleService-Info.plist"; sourceTree = "<group>"; };
 		CBD58DC72F8A70BA00E92606 /* AuthService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthService.swift; sourceTree = "<group>"; };
 		CBD58DC92F8A70FB00E92606 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
@@ -122,6 +136,9 @@
 		CBD58DCF2F8A718E00E92606 /* MainTabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainTabView.swift; sourceTree = "<group>"; };
 		CBD58DD12F8A71A800E92606 /* CreateRequestView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreateRequestView.swift; sourceTree = "<group>"; };
 		CBD58DD52F8A71E400E92606 /* ProfileView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileView.swift; sourceTree = "<group>"; };
+		CBE5A1002FC600010E92B101 /* DeleteAccountView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeleteAccountView.swift; sourceTree = "<group>"; };
+		CBE5A1002FC600010E92B103 /* MeetingClarification+Draft.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "MeetingClarification+Draft.swift"; sourceTree = "<group>"; };
+		CBE5A1002FC600010E92B105 /* AccountDeletionService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountDeletionService.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -140,6 +157,16 @@
 			path = Feed;
 			sourceTree = "<group>";
 		};
+		CBE5A1002FC500010E92B001 /* Features */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = Features;
+			sourceTree = "<group>";
+		};
+		CBE5A1002FC500010E92B002 /* SpinnetTests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = SpinnetTests;
+			sourceTree = "<group>";
+		};
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -150,6 +177,13 @@
 				CBD58DD92F8A730F00E92606 /* FirebaseAuth in Frameworks */,
 				CBD58DDB2F8A731900E92606 /* FirebaseFirestore in Frameworks */,
 				CBD58DDD2F8A732800E92606 /* FirebaseAnalytics in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		CBE5A1002FC500010E92B008 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -165,7 +199,9 @@
 				CBD58DE22F8A8EE800E92606 /* Views */,
 				CBD58DE12F8A8EDF00E92606 /* Services */,
 				CBD58DDE2F8A8EC600E92606 /* App */,
+				CBE5A1002FC500010E92B001 /* Features */,
 				CBD58DB82F8A60A500E92606 /* Spinnet */,
+				CBE5A1002FC500010E92B002 /* SpinnetTests */,
 				CBD58DB72F8A60A500E92606 /* Products */,
 				CBD58DC42F8A6B7A00E92606 /* GoogleService-Info.plist */,
 				CBD58DD72F8A730F00E92606 /* Frameworks */,
@@ -176,6 +212,7 @@
 			isa = PBXGroup;
 			children = (
 				CBD58DB62F8A60A500E92606 /* Spinnet.app */,
+				CBE5A1002FC500010E92B003 /* SpinnetTests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -200,6 +237,7 @@
 				CBC19E582FB74ED000374A7C /* ContentModeration.swift */,
 				CBC19E5A2FB74F8200374A7C /* ReviewService.swift */,
 				CBD7A1012FC1000100E92606 /* UserService.swift */,
+				CBE5A1002FC600010E92B105 /* AccountDeletionService.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -242,6 +280,7 @@
 				CB368E602FB4B5D300D369DC /* TimePickerSheet.swift */,
 				CB2DD5D32FB9272500308707 /* NotificationCenterView.swift */,
 				CB368E622FB4C1E500D369DC /* GameLocationLabel.swift */,
+				CBE5A1002FC600010E92B101 /* DeleteAccountView.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -255,6 +294,7 @@
 				CB368E5A2FB4B2DF00D369DC /* SparringRequest.swift */,
 				CB368E5C2FB4B30400D369DC /* UserProfile.swift */,
 				CB3D664F2FAE23B100542C2C /* CityData.swift */,
+				CBE5A1002FC600010E92B103 /* MeetingClarification+Draft.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -295,6 +335,7 @@
 				CBD58DB82F8A60A500E92606 /* Spinnet */,
 				CBD58DDE2F8A8EC600E92606 /* App */,
 				CBD58DE52F8AA1C100E92606 /* Feed */,
+				CBE5A1002FC500010E92B001 /* Features */,
 			);
 			name = Spinnet;
 			packageProductDependencies = (
@@ -305,6 +346,29 @@
 			productName = Spinnet;
 			productReference = CBD58DB62F8A60A500E92606 /* Spinnet.app */;
 			productType = "com.apple.product-type.application";
+		};
+		CBE5A1002FC500010E92B006 /* SpinnetTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = CBE5A1002FC500010E92B00A /* Build configuration list for PBXNativeTarget "SpinnetTests" */;
+			buildPhases = (
+				CBE5A1002FC500010E92B007 /* Sources */,
+				CBE5A1002FC500010E92B008 /* Frameworks */,
+				CBE5A1002FC500010E92B009 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				CBE5A1002FC500010E92B005 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				CBE5A1002FC500010E92B002 /* SpinnetTests */,
+			);
+			name = SpinnetTests;
+			packageProductDependencies = (
+			);
+			productName = SpinnetTests;
+			productReference = CBE5A1002FC500010E92B003 /* SpinnetTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
 		};
 /* End PBXNativeTarget section */
 
@@ -319,13 +383,17 @@
 					CBD58DB52F8A60A500E92606 = {
 						CreatedOnToolsVersion = 26.4;
 					};
+					CBE5A1002FC500010E92B006 = {
+						CreatedOnToolsVersion = 26.4;
+						TestTargetID = CBD58DB52F8A60A500E92606;
+					};
 				};
 			};
 			buildConfigurationList = CBD58DB12F8A60A500E92606 /* Build configuration list for PBXProject "Spinnet" */;
-			developmentRegion = en;
+			developmentRegion = ru;
 			hasScannedForEncodings = 0;
 			knownRegions = (
-				en,
+				ru,
 				Base,
 			);
 			mainGroup = CBD58DAD2F8A60A500E92606;
@@ -339,6 +407,7 @@
 			projectRoot = "";
 			targets = (
 				CBD58DB52F8A60A500E92606 /* Spinnet */,
+				CBE5A1002FC500010E92B006 /* SpinnetTests */,
 			);
 		};
 /* End PBXProject section */
@@ -349,6 +418,13 @@
 			buildActionMask = 2147483647;
 			files = (
 				CBD58DC52F8A6B7A00E92606 /* GoogleService-Info.plist in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		CBE5A1002FC500010E92B009 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -412,10 +488,28 @@
 				CBD58DD02F8A719100E92606 /* MainTabView.swift in Sources */,
 				CBD58DCC2F8A713C00E92606 /* LoginView.swift in Sources */,
 				CB3849A72F8D4BEB004CFA10 /* TournamentListView.swift in Sources */,
+				CBE5A1002FC600010E92B102 /* DeleteAccountView.swift in Sources */,
+				CBE5A1002FC600010E92B104 /* MeetingClarification+Draft.swift in Sources */,
+				CBE5A1002FC600010E92B106 /* AccountDeletionService.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		CBE5A1002FC500010E92B007 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		CBE5A1002FC500010E92B005 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = CBD58DB52F8A60A500E92606 /* Spinnet */;
+			targetProxy = CBE5A1002FC500010E92B004 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
 		CBD58DBF2F8A60A600E92606 /* Debug */ = {
@@ -607,6 +701,50 @@
 			};
 			name = Release;
 		};
+		CBE5A1002FC500010E92B00B /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 9KJTSBJ8M2;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.SpinnetTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Spinnet.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Spinnet";
+			};
+			name = Debug;
+		};
+		CBE5A1002FC500010E92B00C /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 9KJTSBJ8M2;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.SpinnetTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Spinnet.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Spinnet";
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -624,6 +762,15 @@
 			buildConfigurations = (
 				CBD58DC22F8A60A600E92606 /* Debug */,
 				CBD58DC32F8A60A600E92606 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		CBE5A1002FC500010E92B00A /* Build configuration list for PBXNativeTarget "SpinnetTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				CBE5A1002FC500010E92B00B /* Debug */,
+				CBE5A1002FC500010E92B00C /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

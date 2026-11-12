@@ -13,6 +13,7 @@ struct TournamentDetailView: View {
     
     @State private var showEdit = false
     @State private var showRemoveConfirm = false
+    @State private var showLeaveConfirm = false
     @State private var removeParticipantId = ""
     @State private var removeParticipantName = ""
     @State private var showAlert = false
@@ -57,10 +58,7 @@ struct TournamentDetailView: View {
     // Перевожу дату из Firestore в читаемый формат
     var formattedDate: String {
         guard let timestamp = tournament["date"] as? Timestamp else { return "" }
-        let formatter = DateFormatter()
-        formatter.locale = Locale(identifier: "ru_RU")
-        formatter.dateFormat = "d MMMM yyyy, EEEE"
-        return formatter.string(from: timestamp.dateValue())
+        return AppDate.fullWithWeekday(timestamp.dateValue())
     }
     
     // Кто подтверждён организатором
@@ -97,8 +95,19 @@ struct TournamentDetailView: View {
                         .font(.subheadline)
                         .foregroundColor(.blue)
                 }
-                Label("Организатор: \(tournament["organizerName"] as? String ?? "")",
-                      systemImage: "person.badge.shield.checkmark")
+                // Профиль организатора открывается так же, как профиль любого игрока
+                if let organizerId = tournament["organizerId"] as? String,
+                   !organizerId.isEmpty, organizerId != authService.currentUserId {
+                    NavigationLink {
+                        PlayerProfileView(userId: organizerId)
+                    } label: {
+                        Label("Организатор: \(tournament["organizerName"] as? String ?? "")",
+                              systemImage: "person.badge.shield.checkmark")
+                    }
+                } else {
+                    Label("Организатор: \(tournament["organizerName"] as? String ?? "")",
+                          systemImage: "person.badge.shield.checkmark")
+                }
                 Label("\(participantCount)/\(maxParticipants) участников",
                       systemImage: "person.3.fill")
             }
@@ -108,34 +117,6 @@ struct TournamentDetailView: View {
                 Section("Описание") {
                     Text(desc)
                         .foregroundColor(.secondary)
-                }
-            }
-            
-            // Кнопка записи/отмены (только если я не организатор и турнир не завершён)
-            if !isOrganizer && tournament["status"] as? String != "completed" {
-                Section {
-                    if isJoined {
-                        Button("Отменить участие", role: .destructive) {
-                            leaveAction()
-                        }
-                        .disabled(isProcessing)
-                    } else if isFull {
-                        Text("Все места заняты")
-                            .foregroundColor(.secondary)
-                    } else {
-                        Button(action: joinAction) {
-                            if isProcessing {
-                                ProgressView()
-                            } else {
-                                Text("Записаться на турнир")
-                                    .frame(maxWidth: .infinity)
-                                    .fontWeight(.semibold)
-                            }
-                        }
-                        .disabled(isProcessing)
-                        .foregroundColor(.white)
-                        .listRowBackground(Color.green)
-                    }
                 }
             }
             
@@ -149,45 +130,8 @@ struct TournamentDetailView: View {
                 } else {
                     ForEach(participantNames, id: \.id) { participant in
                         VStack(alignment: .leading, spacing: 8) {
-                            // Имя участника — теперь кликабельное
-                            HStack {
-                                if participant.id == authService.currentUserId {
-                                    // Это я — некликабельный, с пометкой "вы"
-                                    HStack {
-                                        InitialsAvatar(fullName: participant.name, userId: participant.id, size: 28)
-                                        Text(participant.name)
-                                            .foregroundColor(.primary)
-                                        Text("(вы)")
-                                            .font(.caption)
-                                            .foregroundColor(.secondary)
-                                    }
-                                } else {
-                                    // Другой участник — кликабельный профиль
-                                    NavigationLink {
-                                        PlayerProfileView(userId: participant.id)
-                                    } label: {
-                                        HStack {
-                                            InitialsAvatar(fullName: participant.name, userId: participant.id, size: 28)
-                                            Text(participant.name)
-                                                .foregroundColor(.primary)
-                                        }
-                                    }
-                                }
+                            participantRow(participant)
 
-                                Spacer()
-
-                                // Статус подтверждения
-                                if confirmedParticipants.contains(participant.id) {
-                                    HStack(spacing: 4) {
-                                        Image(systemName: "checkmark.circle.fill")
-                                            .foregroundColor(.green)
-                                        Text("Подтверждён")
-                                            .font(.caption)
-                                            .foregroundColor(.green)
-                                    }
-                                }
-                            }
-                            
                             // Кнопки управления (только организатор незавершённого турнира)
                             if isOrganizer && tournament["status"] as? String != "completed" {
                                 HStack(spacing: 12) {
@@ -209,7 +153,7 @@ struct TournamentDetailView: View {
                                                 .font(.caption)
                                         }
                                         .buttonStyle(.borderless)
-                                        .foregroundColor(.green)
+                                        .foregroundColor(AppColor.primary)
                                         .disabled(isProcessing)
                                     }
                                     
@@ -250,6 +194,8 @@ struct TournamentDetailView: View {
             }
         }
         .navigationTitle(tournament["title"] as? String ?? "Турнир")
+        .navigationBarTitleDisplayMode(.inline)
+        .safeAreaInset(edge: .bottom, spacing: 0) { bottomAction }
         .onAppear { loadParticipantNames() }
         .sheet(isPresented: $showEdit) {
             EditTournamentView(
@@ -272,6 +218,13 @@ struct TournamentDetailView: View {
             Text("Удалить \(removeParticipantName) из турнира?")
         }
         
+        .alert("Отменить участие?", isPresented: $showLeaveConfirm) {
+            Button("Остаться", role: .cancel) {}
+            Button("Отменить участие", role: .destructive) { leaveAction() }
+        } message: {
+            Text("Ваше место освободится для других игроков.")
+        }
+
         .alert("Турнир", isPresented: $showAlert) {
             Button("OK") {}
         } message: {
@@ -279,6 +232,89 @@ struct TournamentDetailView: View {
         }
     }
     
+    // MARK: - Нижняя панель: главное действие всегда на виду
+    // Раньше кнопка «Записаться» стояла посреди списка и уходила за край экрана.
+
+    @ViewBuilder
+    private var bottomAction: some View {
+        if !isOrganizer && tournament["status"] as? String != "completed" {
+            VStack(spacing: 0) {
+                Divider()
+                Group {
+                    if isJoined {
+                        VStack(spacing: AppSpacing.s) {
+                            Label("Вы записаны на турнир", systemImage: "checkmark.circle.fill")
+                                .font(.subheadline.weight(.semibold))
+                                .foregroundColor(AppColor.success)
+                            Button("Отменить участие", role: .destructive) {
+                                showLeaveConfirm = true
+                            }
+                            .font(.subheadline)
+                            .disabled(isProcessing)
+                        }
+                    } else if isFull {
+                        Label("Все места заняты", systemImage: "person.3.fill")
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundColor(AppColor.textSecondary)
+                            .frame(maxWidth: .infinity, minHeight: AppSize.buttonHeight)
+                            .background(Color(.systemGray6))
+                            .clipShape(RoundedRectangle(cornerRadius: AppRadius.medium))
+                    } else {
+                        Button(action: joinAction) {
+                            if isProcessing {
+                                ProgressView().tint(.white)
+                            } else {
+                                Text("Записаться на турнир")
+                            }
+                        }
+                        .buttonStyle(PrimaryButtonStyle())
+                        .disabled(isProcessing)
+                    }
+                }
+                .padding(.horizontal, AppSpacing.l)
+                .padding(.vertical, AppSpacing.m)
+            }
+            .background(.bar)
+        }
+    }
+
+    // MARK: - Строка участника
+    // Бейдж «Подтверждён» стоит внутри ссылки, поэтому стрелка у всех строк на одном месте
+
+    private func participantRow(_ participant: (id: String, name: String)) -> some View {
+        let isMe = participant.id == authService.currentUserId
+        let content = HStack(spacing: AppSpacing.s) {
+            InitialsAvatar(fullName: participant.name, userId: participant.id, size: 28)
+            Text(participant.name)
+                .foregroundColor(.primary)
+            if isMe {
+                Text("(вы)")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
+            Spacer(minLength: AppSpacing.s)
+            if confirmedParticipants.contains(participant.id) {
+                HStack(spacing: 4) {
+                    Image(systemName: "checkmark.circle.fill")
+                    Text("Подтверждён")
+                        .font(.caption)
+                }
+                .foregroundColor(AppColor.primary)
+            }
+        }
+        return Group {
+            if isMe {
+                content
+            } else {
+                NavigationLink {
+                    PlayerProfileView(userId: participant.id)
+                } label: {
+                    content
+                }
+            }
+        }
+    }
+
     // MARK: - Отменить подтверждение
         private func unconfirmAction(userId: String) {
             guard let docId = tournament["documentId"] as? String else { return }
@@ -416,7 +452,6 @@ struct TournamentDetailView: View {
             alertMessage = success ? "Турнир завершён" : "Ошибка"
             showAlert = true
             isProcessing = false
-            tournamentService.loadTournaments()
         }
     }
 }

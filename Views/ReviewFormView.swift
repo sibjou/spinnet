@@ -74,7 +74,7 @@ struct ReviewFormView: View {
 
                         Text("\(comment.count)/300")
                             .font(.caption)
-                            .foregroundColor(AppColor.textTertiary)
+                            .foregroundColor(AppColor.textSecondary)
                             .frame(maxWidth: .infinity, alignment: .trailing)
                     }
 
@@ -88,6 +88,7 @@ struct ReviewFormView: View {
                 }
                 .padding(AppSpacing.l)
             }
+            .connectionNotice()
             .navigationTitle("Оценка")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -142,6 +143,8 @@ struct ReviewFormView: View {
         ) { success, message in
             isSubmitting = false
             if success {
+                // Отзыв оставлен — напоминание «Оцените игру» больше не нужно
+                NotificationService.shared.cancelReviewReminder(sparringRequestId: sparringRequestId)
                 let haptic = UINotificationFeedbackGenerator()
                 haptic.notificationOccurred(.success)
                 if let msg = message {

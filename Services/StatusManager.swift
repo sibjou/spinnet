@@ -40,23 +40,32 @@ final class StatusManager {
                        status: String,
                        dateBefore: Date?,
                        handle: @escaping ([QueryDocumentSnapshot]) -> Void) {
+        // Сколько длится проверка и сколько документов пришло: на запуске она идёт параллельно с лентой
+        let tag = "статусы: \(collection) \(status)"
+        Perf.begin(tag)
+        let finish: ([QueryDocumentSnapshot]) -> Void = { documents in
+            Perf.end(tag)
+            Perf.mark("\(tag): документов \(documents.count)")
+            handle(documents)
+        }
+
         let base = db.collection(collection).whereField("status", isEqualTo: status)
 
         guard let dateBefore else {
-            base.getDocuments { snapshot, _ in handle(snapshot?.documents ?? []) }
+            base.getDocuments { snapshot, _ in finish(snapshot?.documents ?? []) }
             return
         }
 
         base.whereField("date", isLessThan: Timestamp(date: dateBefore))
             .getDocuments { [weak self] snapshot, error in
                 if let snapshot {
-                    handle(snapshot.documents)
+                    finish(snapshot.documents)
                     return
                 }
                 debugLog("StatusManager: запрос по дате не выполнен (\(error?.localizedDescription ?? "?")), читаю без фильтра")
                 self?.db.collection(collection)
                     .whereField("status", isEqualTo: status)
-                    .getDocuments { snapshot, _ in handle(snapshot?.documents ?? []) }
+                    .getDocuments { snapshot, _ in finish(snapshot?.documents ?? []) }
             }
     }
 

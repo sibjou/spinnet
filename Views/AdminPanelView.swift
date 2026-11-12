@@ -105,7 +105,7 @@ struct AdminPanelView: View {
             // Дата
             Text(formattedDate(review.createdAt))
                 .font(.caption)
-                .foregroundColor(AppColor.textTertiary)
+                .foregroundColor(AppColor.textSecondary)
 
             // Текст отзыва
             if !review.comment.isEmpty {
@@ -118,7 +118,7 @@ struct AdminPanelView: View {
             } else {
                 Text("(без комментария)")
                     .font(.caption.italic())
-                    .foregroundColor(AppColor.textTertiary)
+                    .foregroundColor(AppColor.textSecondary)
             }
 
             // Кнопки действий — два ряда
@@ -256,9 +256,6 @@ struct AdminPanelView: View {
     }
 
     private func formattedDate(_ date: Date) -> String {
-        let f = DateFormatter()
-        f.locale = Locale(identifier: "ru_RU")
-        f.dateFormat = "d MMM yyyy, HH:mm"
-        return f.string(from: date)
+        AppDate.dayShortYearTime(date)
     }
 }

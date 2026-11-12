@@ -5,48 +5,49 @@ struct NotificationCenterView: View {
 
     @State private var notifications: [AppNotification] = []
     @State private var isLoading = true
-    @State private var selectedFilter: NotificationType? = nil  // nil = все
+    @State private var selectedFilter: NotificationCategory? = nil  // nil = все
     @Environment(\.dismiss) var dismiss
+    @EnvironmentObject var appState: AppState
 
     private let service = NotificationService.shared
 
+    /// Переписка живёт во вкладке «Чаты», здесь её нет
+    private var bellNotifications: [AppNotification] {
+        NotificationGrouping.visible(notifications)
+    }
+
     var filteredNotifications: [AppNotification] {
         if let filter = selectedFilter {
-            return notifications.filter { $0.type == filter }
+            return bellNotifications.filter { $0.type.category == filter }
         }
-        return notifications
+        return bellNotifications
     }
 
     var unreadCount: Int {
-        notifications.filter { !$0.isRead }.count
+        bellNotifications.filter { !$0.isRead }.count
+    }
+
+    /// Разделы фильтра показываются, когда есть из чего выбирать
+    private var showsFilter: Bool {
+        bellNotifications.count > 5 && uniqueCategories.count > 1
     }
 
     var body: some View {
         NavigationStack {
             VStack(spacing: 0) {
-                // Фильтр-чипы
-                if !notifications.isEmpty {
+                if showsFilter {
                     filterScroll
                 }
 
-                // Список
                 if isLoading {
                     Spacer()
                     ProgressView()
                     Spacer()
                 } else if filteredNotifications.isEmpty {
-                    Spacer()
                     emptyState
-                    Spacer()
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
                 } else {
-                    ScrollView {
-                        LazyVStack(spacing: AppSpacing.s) {
-                            ForEach(filteredNotifications) { notif in
-                                notificationCard(notif)
-                            }
-                        }
-                        .padding(AppSpacing.l)
-                    }
+                    notificationList
                 }
             }
             .background(AppColor.background)
@@ -69,61 +70,83 @@ struct NotificationCenterView: View {
         }
     }
 
-    // MARK: - Фильтр-чипы
+    // MARK: - Список по дням
+    // Список (а не стопка карточек): только в нём работает смахивание «Удалить»
+
+    private var notificationList: some View {
+        let now = Date()
+        let sections = FeedGrouping.sections(filteredNotifications, day: { $0.createdAt })
+        return List {
+            ForEach(sections) { section in
+                Section {
+                    ForEach(section.items) { notif in
+                        notificationCard(notif)
+                            .listRowSeparator(.hidden)
+                            .listRowBackground(Color.clear)
+                            .listRowInsets(EdgeInsets(top: AppSpacing.xs, leading: AppSpacing.l,
+                                                      bottom: AppSpacing.xs, trailing: AppSpacing.l))
+                            .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                                Button(role: .destructive) {
+                                    deleteNotification(notif)
+                                } label: {
+                                    Label("Удалить", systemImage: "trash")
+                                }
+                            }
+                    }
+                } header: {
+                    Text(NotificationGrouping.dayTitle(for: section.day, now: now))
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundColor(AppColor.textSecondary)
+                        .textCase(nil)
+                }
+            }
+        }
+        .listStyle(.plain)
+    }
+
+    // MARK: - Разделы
 
     private var filterScroll: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: AppSpacing.s) {
-                filterChip(title: "Все", count: notifications.count, isSelected: selectedFilter == nil) {
+                filterChip(title: "Все", isSelected: selectedFilter == nil) {
                     selectedFilter = nil
                 }
 
-                // Уникальные типы из существующих уведомлений
-                ForEach(uniqueTypes, id: \.self) { type in
-                    let count = notifications.filter { $0.type == type }.count
-                    filterChip(
-                        title: type.displayName,
-                        count: count,
-                        isSelected: selectedFilter == type
-                    ) {
-                        selectedFilter = type
+                // Разделы, по которым есть уведомления
+                ForEach(uniqueCategories, id: \.self) { category in
+                    filterChip(title: category.displayName, isSelected: selectedFilter == category) {
+                        selectedFilter = (selectedFilter == category) ? nil : category
                     }
                 }
             }
             .padding(.horizontal, AppSpacing.l)
             .padding(.vertical, AppSpacing.s)
         }
-        .background(AppColor.cardBackground)
     }
 
-    private var uniqueTypes: [NotificationType] {
-        var seen = Set<NotificationType>()
-        return notifications.compactMap { notif in
-            if seen.contains(notif.type) { return nil }
-            seen.insert(notif.type)
-            return notif.type
+    private var uniqueCategories: [NotificationCategory] {
+        var seen = Set<NotificationCategory>()
+        return bellNotifications.compactMap { notif in
+            let category = notif.type.category
+            if seen.contains(category) { return nil }
+            seen.insert(category)
+            return category
         }
     }
 
-    private func filterChip(title: String, count: Int, isSelected: Bool, action: @escaping () -> Void) -> some View {
+    private func filterChip(title: String, isSelected: Bool, action: @escaping () -> Void) -> some View {
         Button(action: action) {
-            HStack(spacing: 4) {
-                Text(title)
-                    .font(.subheadline.weight(.medium))
-                Text("\(count)")
-                    .font(.caption.bold())
-                    .foregroundColor(isSelected ? .white : AppColor.textSecondary)
-                    .padding(.horizontal, 6)
-                    .padding(.vertical, 2)
-                    .background(isSelected ? Color.white.opacity(0.25) : AppColor.background)
-                    .cornerRadius(8)
-            }
-            .padding(.horizontal, AppSpacing.m)
-            .padding(.vertical, AppSpacing.s)
-            .foregroundColor(isSelected ? .white : AppColor.textPrimary)
-            .background(isSelected ? AppColor.primary : AppColor.background)
-            .cornerRadius(AppRadius.medium)
+            Text(title)
+                .font(.subheadline.weight(isSelected ? .semibold : .regular))
+                .foregroundColor(isSelected ? .white : AppColor.textPrimary)
+                .padding(.horizontal, 12)
+                .frame(minHeight: 36)
+                .background(isSelected ? AppColor.primary : Color(.systemGray6))
+                .clipShape(Capsule())
         }
+        .buttonStyle(.plain)
+        .accessibilityAddTraits(isSelected ? .isSelected : [])
     }
 
     // MARK: - Карточка уведомления
@@ -133,27 +156,22 @@ struct NotificationCenterView: View {
             handleTap(notif)
         } label: {
             HStack(alignment: .top, spacing: AppSpacing.m) {
-                // Иконка слева
-                ZStack {
-                    Circle()
-                        .fill(colorForType(notif.type).opacity(0.15))
-                        .frame(width: 44, height: 44)
-                    Image(systemName: notif.type.icon)
-                        .foregroundColor(colorForType(notif.type))
-                        .font(.system(size: 18))
-                }
+                leadingIcon(notif)
 
                 // Текст
                 VStack(alignment: .leading, spacing: 4) {
-                    HStack {
+                    HStack(alignment: .top) {
                         Text(notif.title)
-                            .font(.subheadline.bold())
+                            .font(.subheadline.weight(notif.isRead ? .regular : .bold))
                             .foregroundColor(AppColor.textPrimary)
-                        Spacer()
+                            .multilineTextAlignment(.leading)
+                        Spacer(minLength: AppSpacing.s)
                         if !notif.isRead {
                             Circle()
                                 .fill(AppColor.primary)
                                 .frame(width: 8, height: 8)
+                                .padding(.top, 5)
+                                .accessibilityLabel("Новое")
                         }
                     }
 
@@ -163,58 +181,65 @@ struct NotificationCenterView: View {
                         .lineLimit(3)
                         .multilineTextAlignment(.leading)
 
-                    Text(timeAgo(notif.createdAt))
+                    Text(NotificationGrouping.timeAgo(notif.createdAt))
                         .font(.caption)
-                        .foregroundColor(AppColor.textTertiary)
+                        .foregroundColor(AppColor.textSecondary)
                 }
             }
+            .frame(maxWidth: .infinity, alignment: .leading)
             .padding(AppSpacing.m)
-            .background(notif.isRead ? AppColor.cardBackground : AppColor.cardBackground.opacity(0.8))
-            .cornerRadius(AppRadius.large)
-            .overlay(
-                RoundedRectangle(cornerRadius: AppRadius.large)
-                    .stroke(notif.isRead ? Color.clear : AppColor.primary.opacity(0.3), lineWidth: 1)
-            )
+            .background(AppColor.cardBackground)
+            .clipShape(RoundedRectangle(cornerRadius: AppRadius.large))
         }
         .buttonStyle(.plain)
-        .swipeActions(edge: .trailing, allowsFullSwipe: true) {
-            Button(role: .destructive) {
-                deleteNotification(notif)
-            } label: {
-                Label("Удалить", systemImage: "trash")
+    }
+
+    // Слева: аватар человека, который совершил действие (с маленьким значком типа),
+    // а если человека нет — просто значок типа
+    @ViewBuilder
+    private func leadingIcon(_ notif: AppNotification) -> some View {
+        if let actorId = notif.actorId, let actorName = notif.actorName, !actorId.isEmpty {
+            ZStack(alignment: .bottomTrailing) {
+                InitialsAvatar(fullName: actorName, userId: actorId, size: 44)
+                Image(systemName: notif.type.icon)
+                    .font(.system(size: 9, weight: .bold))
+                    .foregroundColor(.white)
+                    .frame(width: 18, height: 18)
+                    .background(colorForType(notif.type))
+                    .clipShape(Circle())
+                    .overlay(Circle().stroke(AppColor.cardBackground, lineWidth: 2))
+                    .offset(x: 4, y: 4)
+            }
+            .frame(width: 44, height: 44)
+        } else {
+            ZStack {
+                Circle()
+                    .fill(colorForType(notif.type).opacity(0.15))
+                    .frame(width: 44, height: 44)
+                Image(systemName: notif.type.icon)
+                    .foregroundColor(colorForType(notif.type))
+                    .font(.system(size: 18))
             }
         }
     }
 
+    // Один фирменный цвет для всех типов; красным выделена только отмена
     private func colorForType(_ type: NotificationType) -> Color {
-        switch type.iconColor {
-        case "primary": return AppColor.primary
-        case "warning": return AppColor.warning
-        case "danger":  return AppColor.danger
-        case "info":    return AppColor.info
-        case "star":    return AppColor.star
-        default:        return AppColor.primary
-        }
+        type == .cancellation ? AppColor.danger : AppColor.primary
     }
 
     // MARK: - Пустое состояние
 
     private var emptyState: some View {
-        VStack(spacing: AppSpacing.m) {
-            Image(systemName: "bell.slash")
-                .font(.system(size: 60))
-                .foregroundColor(AppColor.textTertiary)
-            Text("Нет уведомлений")
-                .font(.title3.bold())
-                .foregroundColor(AppColor.textSecondary)
-            Text(selectedFilter == nil
-                 ? "Здесь будут появляться важные события"
-                 : "Нет уведомлений в этой категории")
-                .font(.subheadline)
-                .foregroundColor(AppColor.textTertiary)
-                .multilineTextAlignment(.center)
-        }
-        .padding(AppSpacing.xxl)
+        EmptyStateView(
+            art: .symbol("bell"),
+            title: selectedFilter == nil ? "Пока тихо" : "В этом разделе пусто",
+            message: selectedFilter == nil
+                ? "Здесь появятся напоминания об играх, брони и счёт матчей. Сообщения от игроков — во вкладке «Чаты»."
+                : "Выберите «Все», чтобы увидеть остальное.",
+            secondaryTitle: selectedFilter == nil ? nil : "Показать все",
+            secondaryAction: selectedFilter == nil ? nil : { selectedFilter = nil }
+        )
     }
 
     // MARK: - Действия
@@ -233,7 +258,9 @@ struct NotificationCenterView: View {
             service.markAsRead(userId: userId, notificationId: notif.id)
             load()
         }
-        // TODO: навигация к связанному объекту через AppState
+        // Переходим к связанному объекту: профиль откроет игру или экран счёта
+        appState.handleNotificationTap(type: notif.type.rawValue, targetId: notif.targetId)
+        dismiss()
     }
 
     private func markAllAsRead() {
@@ -247,23 +274,5 @@ struct NotificationCenterView: View {
         guard let userId = authService.currentUserId else { return }
         service.deleteNotification(userId: userId, notificationId: notif.id)
         notifications.removeAll { $0.id == notif.id }
-    }
-
-    // MARK: - Время "назад"
-
-    private func timeAgo(_ date: Date) -> String {
-        let seconds = Int(Date().timeIntervalSince(date))
-        if seconds < 60 { return "только что" }
-        let minutes = seconds / 60
-        if minutes < 60 { return "\(minutes) мин назад" }
-        let hours = minutes / 60
-        if hours < 24 { return "\(hours) ч назад" }
-        let days = hours / 24
-        if days < 7 { return "\(days) дн назад" }
-
-        let f = DateFormatter()
-        f.locale = Locale(identifier: "ru_RU")
-        f.dateFormat = "d MMM"
-        return f.string(from: date)
     }
 }
