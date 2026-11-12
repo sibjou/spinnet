@@ -6,12 +6,14 @@ struct BookedGameDetailView: View {
     @ObservedObject var authService: AuthService
     @ObservedObject var sparringService: SparringService
     @Binding var isPresented: Bool
+    /// Открыть сразу экран счёта (переход по уведомлению о счёте)
+    var autoOpenMatch: Bool = false
+    /// Открыть сразу форму отзыва (переход по уведомлению «Оцените игру»)
+    var autoOpenReview: Bool = false
     @EnvironmentObject var appState: AppState
     @Environment(\.dismiss) var dismiss
 
-    @State private var clarification: MeetingClarification? = nil
     @State private var isLoadingClarification = false
-    @State private var showClarification = false
     @State private var partnerName: String = "Загрузка..."
     @State private var partnerSkill: String = ""
     @State private var partnerCity: String = ""
@@ -20,13 +22,17 @@ struct BookedGameDetailView: View {
     @State private var showCancelConfirm = false
     @State private var showReviewForm = false
     @State private var alreadyReviewed = false
+    @State private var reviewStatusLoaded = false
+    @State private var meeting = MeetingMatches([])
+    @State private var showMatch = false
+    @State private var didAutoOpenMatch = false
+    @State private var didAutoOpenReview = false
+    @State private var partnerAllowsClarifications = true
+    @State private var showMessagesOffAlert = false
 
     var formattedDate: String {
         guard let timestamp = game["date"] as? Timestamp else { return "Дата не указана" }
-        let formatter = DateFormatter()
-        formatter.locale = Locale(identifier: "ru_RU")
-        formatter.dateFormat = "d MMMM yyyy, EEEE"
-        return formatter.string(from: timestamp.dateValue())
+        return AppDate.fullWithWeekday(timestamp.dateValue())
     }
 
     var partnerId: String? {
@@ -51,9 +57,92 @@ struct BookedGameDetailView: View {
         gameStatus == "completed" || gameStatus == "expired"
     }
 
+    // MARK: - Счёт матча
+
+    var iAmAuthor: Bool {
+        game["userId"] as? String == authService.currentUserId
+    }
+
+    var gameStart: Date? {
+        guard let timestamp = game["date"] as? Timestamp,
+              let slot = game["timeSlot"] as? String else { return nil }
+        return GameSlot.startDate(day: timestamp.dateValue(), slot: slot)
+    }
+
+    /// Момент окончания игры
+    var gameEnd: Date? {
+        guard let timestamp = game["date"] as? Timestamp,
+              let slot = game["timeSlot"] as? String,
+              let range = GameSlot.minutes(from: slot) else { return nil }
+        let calendar = Calendar.current
+        let midnight = calendar.startOfDay(for: timestamp.dateValue())
+        return calendar.date(byAdding: .minute, value: range.end, to: midnight)
+    }
+
+    /// Время игры вышло. Считаем по часам, а не по статусу в базе: статус обновляется
+    /// только когда кто-то откроет приложение, и до этого кнопки итогов не появлялись.
+    var gameEnded: Bool {
+        if gameStatus == "completed" { return true }
+        guard let end = gameEnd else { return false }
+        return end <= Date()
+    }
+
+    /// Оценить партнёра можно, когда игра закончилась и партнёр известен
+    var canRate: Bool {
+        guard let id = partnerId, !id.isEmpty else { return false }
+        return ["booked", "in_progress", "completed"].contains(gameStatus) && gameEnded
+    }
+
+    /// Счёт можно вносить, когда партнёр есть и игра уже началась
+    var canEnterScore: Bool {
+        guard let id = partnerId, !id.isEmpty,
+              ["booked", "in_progress", "completed"].contains(gameStatus),
+              let start = gameStart else { return false }
+        return start <= Date()
+    }
+
+    private var matchRowTitle: String {
+        guard let myId = authService.currentUserId else { return "Внести счёт" }
+        switch meeting.summary(for: myId) {
+        case .none:                        return "Внести счёт"
+        case .needsYourAnswer:             return "Подтвердить счёт"
+        case .waitingForPartner:           return "Счёт внесён, ждём партнёра"
+        case .single:                      return "Счёт матча"
+        case .several:                     return "Счёт матчей (\(meeting.confirmed.count))"
+        case .disputedOnly:                return "Счёт оспорен"
+        }
+    }
+
+    /// Справа в строке: итог подтверждённых матчей
+    private var matchRowTrailing: String? {
+        guard let myId = authService.currentUserId else { return nil }
+        switch meeting.summary(for: myId) {
+        case .single(let won, let lost, _):  return "\(won):\(lost)"
+        case .several(let won, let lost):    return "\(won):\(lost)"
+        default:                             return nil
+        }
+    }
+
+    private var matchFooterText: String {
+        if meeting.isEmpty {
+            return "Любой из вас может внести результат по партиям. Второй игрок получит уведомление и подтвердит счёт. Сыграли несколько матчей — вносите каждый отдельно."
+        }
+        return "В статистику и рейтинг идут только подтверждённые матчи."
+    }
+
     // Игра ещё предстоит — можно уточнять и отменять
     var isUpcoming: Bool {
-        gameStatus == "booked" || gameStatus == "in_progress"
+        (gameStatus == "booked" || gameStatus == "in_progress") && !gameEnded
+    }
+
+    private var cancelTitle: String { iAmAuthor ? "Отменить игру?" : "Отказаться от игры?" }
+    private var cancelButtonTitle: String { iAmAuthor ? "Отменить игру" : "Отказаться от игры" }
+    private var cancelConfirmTitle: String { iAmAuthor ? "Отменить" : "Отказаться" }
+
+    private var cancelMessage: String {
+        iAmAuthor
+            ? "Игра будет отменена, заявка закроется. Партнёр получит уведомление"
+            : "Заявка автора вернётся в общую ленту. Он получит уведомление"
     }
 
     var body: some View {
@@ -92,17 +181,39 @@ struct BookedGameDetailView: View {
                         location: game["location"] as? String ?? ""
                     )
                     Button {
-                        let city     = game["city"]     as? String ?? ""
-                        let location = game["location"] as? String ?? ""
-                        let query    = "\(city) \(location)".trimmingCharacters(in: .whitespaces)
-                        let encoded  = query.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
-                        if let url = URL(string: "maps://?q=\(encoded)") {
-                            UIApplication.shared.open(url)
-                        }
+                        // Если место выбрано на карте, метка ставится точно в эту точку
+                        MapsOpener.open(
+                            name:      game["location"] as? String ?? "",
+                            city:      game["city"]     as? String ?? "",
+                            latitude:  game["locationLatitude"]  as? Double,
+                            longitude: game["locationLongitude"] as? Double
+                        )
                     } label: {
                         Label("Открыть в картах", systemImage: "map")
                             .font(.subheadline)
                             .foregroundColor(.blue)
+                    }
+                }
+
+                // MARK: - Счёт матча
+                if canEnterScore || !meeting.isEmpty {
+                    Section {
+                        Button {
+                            showMatch = true
+                        } label: {
+                            HStack {
+                                Label(matchRowTitle, systemImage: "list.clipboard")
+                                Spacer()
+                                if let trailing = matchRowTrailing {
+                                    Text(trailing)
+                                        .font(.subheadline.weight(.bold).monospacedDigit())
+                                        .foregroundColor(.secondary)
+                                }
+                            }
+                        }
+                    } footer: {
+                        Text(matchFooterText)
+                            .font(.caption)
                     }
                 }
 
@@ -126,17 +237,17 @@ struct BookedGameDetailView: View {
                                 }
                             }
                         }
-                        .disabled(isLoadingClarification)
+                        .disabled(isLoadingClarification || isLoadingPartner)
                     }
                 }
 
-                // MARK: - Оценить игрока (только для завершённых)
-                if gameStatus == "completed" {
+                // MARK: - Оценить игрока (как только игра закончилась)
+                if canRate {
                     Section {
                         if alreadyReviewed {
                             HStack {
                                 Image(systemName: "checkmark.circle.fill")
-                                    .foregroundColor(.green)
+                                    .foregroundColor(AppColor.primary)
                                 Text("Вы оценили эту игру")
                                     .foregroundColor(.secondary)
                             }
@@ -148,6 +259,8 @@ struct BookedGameDetailView: View {
                                     .foregroundColor(.orange)
                             }
                         }
+                    } header: {
+                        Text("Итоги встречи")
                     } footer: {
                         Text("Ваш отзыв поможет другим игрокам найти достойного партнёра")
                             .font(.caption)
@@ -157,37 +270,48 @@ struct BookedGameDetailView: View {
                 // MARK: - Отмена (только для предстоящих игр)
                 if isUpcoming {
                     Section {
-                        Button("Отменить участие", role: .destructive) {
+                        Button(cancelButtonTitle, role: .destructive) {
                             showCancelConfirm = true
                         }
                         .disabled(isProcessing)
                     } footer: {
-                        Text("Заявка вернётся в общую ленту")
+                        Text(cancelMessage)
                             .font(.caption)
                     }
                 }
             }
-            .navigationTitle(isFinished ? "Завершённая игра" : "Предстоящая игра")
+            .connectionNotice()
+            .navigationTitle(isFinished || gameEnded ? "Завершённая игра" : "Предстоящая игра")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button("Закрыть") { isPresented = false }
                 }
             }
-            .alert("Отменить участие?", isPresented: $showCancelConfirm) {
+            .alert(cancelTitle, isPresented: $showCancelConfirm) {
                 Button("Нет", role: .cancel) {}
-                Button("Отменить", role: .destructive) { cancelAction() }
+                Button(cancelConfirmTitle, role: .destructive) { cancelAction() }
             } message: {
-                Text("Заявка вернётся в общую ленту")
+                Text(cancelMessage)
             }
-            .sheet(isPresented: $showClarification) {
-                if let clar = clarification {
-                    NavigationStack {
-                        ClarificationDetailView(
-                            clarification: clar,
-                            authService: authService
-                        )
-                    }
+            .alert("Сообщения недоступны", isPresented: $showMessagesOffAlert) {
+                Button("Понятно", role: .cancel) {}
+            } message: {
+                Text("\(partnerName) отключил(а) сообщения от других игроков.")
+            }
+            .navigationDestination(isPresented: $showMatch) {
+                if let id = partnerId, let requestId = game["documentId"] as? String,
+                   let myId = authService.currentUserId {
+                    MeetingMatchesView(
+                        requestId: requestId,
+                        myId: myId,
+                        myName: authService.userProfile?.fullName ?? "Вы",
+                        partnerId: id,
+                        partnerName: partnerName,
+                        iAmAuthor: iAmAuthor,
+                        autoOpenPending: autoOpenMatch,
+                        onChanged: { updated in meeting = updated }
+                    )
                 }
             }
             .sheet(isPresented: $showReviewForm) {
@@ -207,6 +331,7 @@ struct BookedGameDetailView: View {
             .onAppear {
                 loadPartnerInfo()
                 checkIfReviewed()
+                loadMatch()
             }
         }
     }
@@ -225,10 +350,42 @@ struct BookedGameDetailView: View {
                 self.partnerName  = UserService.fullName(from: data)
                 self.partnerSkill = data["skillLevel"] as? String ?? ""
                 self.partnerCity  = data["city"]       as? String ?? ""
+                self.partnerAllowsClarifications = PrivacySettings(userData: data).allowClarifications
             } else {
                 self.partnerName = "Пользователь удалён"
             }
             self.isLoadingPartner = false
+            self.openMatchIfRequested()
+            self.openReviewIfRequested()
+        }
+    }
+
+    // MARK: - Счёт: загрузка и автоматическое открытие
+
+    private func loadMatch() {
+        guard let requestId = game["documentId"] as? String else { return }
+        MatchService.shared.fetchMeetingMatches(requestId: requestId) { found in
+            self.meeting = found
+        }
+    }
+
+    /// Форма отзыва открывается, когда известен партнёр и ясно, что отзыв ещё не оставлен
+    private func openReviewIfRequested() {
+        guard autoOpenReview, !didAutoOpenReview,
+              !isLoadingPartner, reviewStatusLoaded,
+              canRate, !alreadyReviewed else { return }
+        didAutoOpenReview = true
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+            showReviewForm = true
+        }
+    }
+
+    private func openMatchIfRequested() {
+        guard autoOpenMatch, !didAutoOpenMatch,
+              let id = partnerId, !id.isEmpty else { return }
+        didAutoOpenMatch = true
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+            showMatch = true
         }
     }
 
@@ -247,6 +404,12 @@ struct BookedGameDetailView: View {
                         self.appState.selectedTab = .chat
                         self.isPresented = false
                     } else {
+                        // Партнёр отключил сообщения — новый диалог не создаём
+                        guard self.partnerAllowsClarifications else {
+                            self.showMessagesOffAlert = true
+                            return
+                        }
+
                         // Создаём draft с правильными ролями
                         guard let myUserId = self.authService.currentUserId,
                               let profile = self.authService.userProfile else { return }
@@ -284,9 +447,15 @@ struct BookedGameDetailView: View {
                             "createdAt":         Timestamp(),
                             "updatedAt":         Timestamp()
                         ]
+                        var draft = draftData
+                        if let latitude = self.game["locationLatitude"] as? Double,
+                           let longitude = self.game["locationLongitude"] as? Double {
+                            draft["sparringLatitude"] = latitude
+                            draft["sparringLongitude"] = longitude
+                        }
 
                         let draftId = "draft_\(requestId)"
-                        if let clar = MeetingClarification(id: draftId, data: draftData) {
+                        if let clar = MeetingClarification(id: draftId, data: draft) {
                             self.appState.clarificationToOpen = clar
                             self.appState.selectedTab = .chat
                             self.isPresented = false
@@ -320,6 +489,8 @@ struct BookedGameDetailView: View {
             sparringRequestId: requestId
         ) { reviewed in
             alreadyReviewed = reviewed
+            reviewStatusLoaded = true
+            openReviewIfRequested()
         }
     }
 }

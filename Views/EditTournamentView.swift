@@ -31,11 +31,7 @@ struct EditTournamentView: View {
         Calendar.current.date(byAdding: .day, value: 1, to: Date()) ?? Date()
     }
 
-    private func formatTime(_ date: Date) -> String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "HH:mm"
-        return formatter.string(from: date)
-    }
+    private func formatTime(_ date: Date) -> String { AppDate.clock(date) }
 
     var body: some View {
         NavigationStack {
@@ -47,10 +43,7 @@ struct EditTournamentView: View {
                         Section("Основная информация") {
                             TextField("Название турнира", text: $title)
 
-                            DatePicker("Дата",
-                                       selection: $date,
-                                       in: minimumDate...,
-                                       displayedComponents: .date)
+                            InlineDatePickerRow(title: "Дата", date: $date, minimumDate: minimumDate)
                                 .onChange(of: date) { _, newValue in
                                     if !isMultiDay { endDate = newValue }
                                     if endDate < newValue { endDate = newValue }
@@ -60,27 +53,24 @@ struct EditTournamentView: View {
                                 Text("Время начала")
                                 Spacer()
                                 Button(formatTime(startTime)) { showStartPicker = true }
-                                    .foregroundColor(.green)
+                                    .foregroundColor(AppColor.primary)
                             }
 
                             Toggle("Турнир идёт несколько дней", isOn: $isMultiDay)
-                                .tint(.green)
+                                .tint(AppColor.primary)
                                 .onChange(of: isMultiDay) { _, newValue in
                                     if !newValue { endDate = date }
                                 }
 
                             if isMultiDay {
-                                DatePicker("Дата окончания",
-                                           selection: $endDate,
-                                           in: date...,
-                                           displayedComponents: .date)
+                                InlineDatePickerRow(title: "Дата окончания", date: $endDate, minimumDate: date)
                             }
 
                             HStack {
                                 Text("Время окончания")
                                 Spacer()
                                 Button(formatTime(endTime)) { showEndPicker = true }
-                                    .foregroundColor(.green)
+                                    .foregroundColor(AppColor.primary)
                             }
 
                             HStack {
@@ -125,6 +115,7 @@ struct EditTournamentView: View {
                     }
                 }
             }
+            .connectionNotice()
             .navigationTitle("Редактирование")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -167,14 +158,11 @@ struct EditTournamentView: View {
                     self.description    = data["description"]    as? String ?? ""
                     self.maxParticipants = data["maxParticipants"] as? Int ?? 16
 
-                    let f = DateFormatter()
-                    f.dateFormat = "HH:mm"
-
                     if let timestamp = data["date"] as? Timestamp {
                         self.date = timestamp.dateValue()
                     }
                     if let timeStr = data["startTime"] as? String {
-                        self.startTime = f.date(from: timeStr) ?? Date()
+                        self.startTime = AppDate.parseClock(timeStr) ?? Date()
                     }
 
                     // endDate — если нет, ставим равной date
@@ -188,7 +176,7 @@ struct EditTournamentView: View {
 
                     // endTime
                     if let endTimeStr = data["endTime"] as? String {
-                        self.endTime = f.date(from: endTimeStr) ?? Date()
+                        self.endTime = AppDate.parseClock(endTimeStr) ?? Date()
                     } else {
                         self.endTime = Calendar.current.date(from: DateComponents(hour: 18, minute: 0)) ?? Date()
                     }

@@ -66,14 +66,13 @@ struct EditProfileView: View {
                             TextField("Фамилия", text: $lastName)
                                 .disabled(!canChangeName)
                                 .foregroundColor(canChangeName ? .primary : .secondary)
-                            TextField("Город", text: $city)
+                            CityRow(city: $city)
                         } header: {
-                            Text("Личные данные")
+                            Text("О вас")
                         } footer: {
                             if !canChangeName, let date = nextNameChangeDate {
                                 Text("Имя и фамилию можно изменить после \(formattedDate(date))")
                                     .font(.caption)
-                                    .foregroundColor(.orange)
                             } else {
                                 Text("Имя и фамилию можно менять не чаще раза в 30 дней")
                                     .font(.caption)
@@ -114,12 +113,12 @@ struct EditProfileView: View {
                     }
                 }
             }
+            .connectionNotice()
             .navigationTitle("Редактирование")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
                     Button("Отмена") { dismiss() }
-                        .foregroundColor(.red)
                 }
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button("Сохранить") { saveChanges() }
@@ -198,7 +197,7 @@ struct EditProfileView: View {
         var updateData: [String: Any] = [
             "firstName":  firstName,
             "lastName":   lastName,
-            "city":       city,
+            "city":       CityName.canonical(city),
             "skillLevel": skillLevel,
             "grip":       grip,
             "playStyle":  playStyle,
@@ -215,7 +214,7 @@ struct EditProfileView: View {
                 if let error = error {
                     debugLog("❌ Ошибка сохранения профиля: \(error.localizedDescription)")
                     isSaving = false
-                    errorMessage = "Не удалось сохранить: \(error.localizedDescription)"
+                    errorMessage = UserFacingError.message(for: error, fallback: "Не удалось сохранить профиль. Попробуйте ещё раз.")
                     showError = true
                     return
                 }
@@ -263,9 +262,6 @@ struct EditProfileView: View {
 
     // MARK: - Формат даты
     private func formattedDate(_ date: Date) -> String {
-        let f = DateFormatter()
-        f.locale = Locale(identifier: "ru_RU")
-        f.dateFormat = "d MMMM yyyy"
-        return f.string(from: date)
+        AppDate.dayLongYear(date)
     }
 }

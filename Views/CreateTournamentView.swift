@@ -28,11 +28,7 @@ struct CreateTournamentView: View {
 
     let participantOptions = [4, 8, 12, 16, 24, 32, 64]
 
-    private func formatTime(_ date: Date) -> String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "HH:mm"
-        return formatter.string(from: date)
-    }
+    private func formatTime(_ date: Date) -> String { AppDate.clock(date) }
 
     var body: some View {
         NavigationStack {
@@ -40,10 +36,7 @@ struct CreateTournamentView: View {
                 Section("Основная информация") {
                     TextField("Название турнира", text: $title)
 
-                    DatePicker("Дата проведения",
-                               selection: $date,
-                               in: minimumDate...,
-                               displayedComponents: .date)
+                    InlineDatePickerRow(title: "Дата проведения", date: $date, minimumDate: minimumDate)
                         .onChange(of: date) { _, newValue in
                             if !isMultiDay { endDate = newValue }
                             if endDate < newValue { endDate = newValue }
@@ -53,27 +46,24 @@ struct CreateTournamentView: View {
                         Text("Время начала")
                         Spacer()
                         Button(formatTime(startTime)) { showStartPicker = true }
-                            .foregroundColor(.green)
+                            .foregroundColor(AppColor.primary)
                     }
 
                     Toggle("Турнир идёт несколько дней", isOn: $isMultiDay)
-                        .tint(.green)
+                        .tint(AppColor.primary)
                         .onChange(of: isMultiDay) { _, newValue in
                             if !newValue { endDate = date }
                         }
 
                     if isMultiDay {
-                        DatePicker("Дата окончания",
-                                   selection: $endDate,
-                                   in: date...,
-                                   displayedComponents: .date)
+                        InlineDatePickerRow(title: "Дата окончания", date: $endDate, minimumDate: date)
                     }
 
                     HStack {
                         Text("Время окончания")
                         Spacer()
                         Button(formatTime(endTime)) { showEndPicker = true }
-                            .foregroundColor(.green)
+                            .foregroundColor(AppColor.primary)
                     }
 
                     HStack {
@@ -122,9 +112,10 @@ struct CreateTournamentView: View {
                     }
                     .disabled(title.isEmpty || city.isEmpty || location.isEmpty || isLoading)
                     .foregroundColor(.white)
-                    .listRowBackground(Color.green)
+                    .listRowBackground(AppColor.primary)
                 }
             }
+            .connectionNotice()
             .navigationTitle("Новый турнир")
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
@@ -144,14 +135,13 @@ struct CreateTournamentView: View {
             .alert("Турнир создан!", isPresented: $showSuccess) {
                 Button("OK") {
                     isPresented = false
-                    tournamentService.loadTournaments()
                 }
             } message: {
                 Text("Игроки увидят ваш турнир в списке")
             }
             .onAppear {
                 if city.isEmpty, let profileCity = authService.userProfile?.city {
-                    city = profileCity
+                    city = CityName.canonical(profileCity)
                 }
                 endDate = date
             }
@@ -172,7 +162,7 @@ struct CreateTournamentView: View {
             startTime: formatTime(startTime),
             endDate: isMultiDay ? endDate : date,
             endTime: formatTime(endTime),
-            city: city,
+            city: CityName.canonical(city),
             location: location,
             description: description,
             maxParticipants: maxParticipants,

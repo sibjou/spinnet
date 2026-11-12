@@ -6,7 +6,7 @@ import FirebaseFirestore
 // Структура:
 //  Шапка: аватар, имя, город, бейджи характеристик, статистика
 //  Кнопка редактирования профиля
-//  Переключатель из 3 вкладок: Игры | Участвую | Создаю
+//  Переключатель из 4 вкладок: Игры | Статистика | Участвую | Организую
 //  Содержимое выбранной вкладки со сворачиваемыми секциями
 
 struct ProfileView: View {
@@ -25,7 +25,9 @@ struct ProfileView: View {
     
     
     @ObservedObject var authService: AuthService
+    @EnvironmentObject var appState: AppState
     @StateObject var sparringService   = SparringService()
+    @StateObject var matchesStore      = PlayerMatchesStore()
     @StateObject var tournamentService = TournamentService()
 
     // MARK: - Состояние UI
@@ -36,14 +38,20 @@ struct ProfileView: View {
         "created_completed"
     ]
 
-    // Какая вкладка выбрана: 0 = Игры, 1 = Участвую, 2 = Создаю
+    // Какая вкладка выбрана: 0 = Игры, 1 = Статистика, 2 = Участвую, 3 = Организую
     @State var selectedTab = 0
+
+    // Фильтры и сортировка истории игр
+    @State var historyFilter = GameHistoryFilter()
 
     // MARK: - Состояние модальных экранов
 
     @State var editingRequestId: String? = nil   // открыть редактирование заявки
     @State var bookedGameId: String?    = nil    // открыть детали забронированной игры
     @State var bookedGameData: [String: Any] = [:]
+    @State var bookedGameOpensMatch = false      // открыть сразу экран счёта (по уведомлению)
+    @State var bookedGameOpensReview = false     // открыть сразу форму отзыва (по уведомлению)
+    @State var profileToOpen: String? = nil      // открыть профиль человека (по уведомлению об отмене)
     @State var showSettings    = false
     @State var showEditProfile = false
 
@@ -53,6 +61,12 @@ struct ProfileView: View {
     @State var isLoadingProfile = true
     @State var completedParticipationTournaments: [[String: Any]] = []
     @State var completedCreatedTournaments: [[String: Any]] = []
+    // Незавершённые турниры (предстоящие и идущие): приходят теми же двумя запросами, что и завершённые
+    @State var activeParticipationTournaments: [[String: Any]] = []
+    @State var activeCreatedTournaments: [[String: Any]] = []
+
+    // Профиль открывают часто (вкладка, возврат из окон), но данные не должны перечитываться чаще раза в несколько секунд
+    @State var loadPolicy = RefreshPolicy(minInterval: 5)
 
     // MARK: - Тело
 
@@ -73,6 +87,8 @@ struct ProfileView: View {
                 }
                 .padding(.vertical, AppSpacing.l)
             }
+            .scrollDismissesKeyboard(.interactively)
+            .tabBarInset()
             .background(AppColor.background)
             .navigationTitle("Профиль")
             .toolbar {
@@ -106,6 +122,9 @@ struct ProfileView: View {
                         }
                         .contentShape(Rectangle())
                     }
+                    .accessibilityLabel(notificationService.unreadCountValue > 0
+                                        ? "Уведомления, новых: \(notificationService.unreadCountValue)"
+                                        : "Уведомления")
                 }
 
                 // Редактирование + настройки — справа
@@ -118,6 +137,7 @@ struct ProfileView: View {
                                 .font(.body)
                                 .foregroundColor(AppColor.textPrimary)
                         }
+                        .accessibilityLabel("Редактировать профиль")
 
                         Button {
                             showSettings = true
@@ -126,6 +146,7 @@ struct ProfileView: View {
                                 .font(.body)
                                 .foregroundColor(AppColor.textPrimary)
                         }
+                        .accessibilityLabel("Настройки")
                     }
                 }
             }
@@ -152,14 +173,20 @@ struct ProfileView: View {
                         get: { editingRequestId != nil },
                         set: { if !$0 { editingRequestId = nil } }
                     ),
-                    onUpdate: { loadAllData() }
+                    onUpdate: { loadAllData(force: true) }
                 )
             }
             // Детали забронированной/завершённой игры
             .sheet(item: Binding(
                 get: { bookedGameId.map { IdentifiableString(id: $0) } },
                 set: { bookedGameId = $0?.id }
-            )) { _ in
+            ), onDismiss: {
+                bookedGameOpensMatch = false
+                bookedGameOpensReview = false
+                if let userId = authService.currentUserId {
+                    matchesStore.load(userId: userId, force: true)
+                }
+            }) { _ in
                 BookedGameDetailView(
                     game: bookedGameData,
                     authService: authService,
@@ -167,15 +194,31 @@ struct ProfileView: View {
                     isPresented: Binding(
                         get: { bookedGameId != nil },
                         set: { if !$0 { bookedGameId = nil } }
-                    )
+                    ),
+                    autoOpenMatch: bookedGameOpensMatch,
+                    autoOpenReview: bookedGameOpensReview
                 )
+            }
+            // Профиль другого игрока (переход по уведомлению)
+            .sheet(item: Binding(
+                get: { profileToOpen.map { IdentifiableString(id: $0) } },
+                set: { profileToOpen = $0?.id }
+            )) { wrapper in
+                NavigationStack {
+                    PlayerProfileView(userId: wrapper.id)
+                        .toolbar {
+                            ToolbarItem(placement: .cancellationAction) {
+                                Button("Закрыть") { profileToOpen = nil }
+                            }
+                        }
+                }
             }
             // Редактирование профиля
             .sheet(isPresented: $showEditProfile) {
                 EditProfileView(
                     authService: authService,
                     isPresented: $showEditProfile,
-                    onUpdate: { loadAllData() }
+                    onUpdate: { loadAllData(force: true) }
                 )
             }
             // Список отзывов
@@ -189,40 +232,46 @@ struct ProfileView: View {
                     }
                 }
             }
-            .onAppear { loadAllData() }
+            .onAppear {
+                Perf.mark("профиль: открыт")
+                loadAllData()
+                openPendingNotificationTarget()
+            }
+            .onChange(of: appState.pendingNotificationTarget) { _, _ in
+                openPendingNotificationTarget()
+            }
+            // Вкладки остаются в памяти: вернулись в профиль — данные показываются сразу, а свежие подгружаются фоном
+            .onChange(of: appState.selectedTab) { _, tab in
+                if tab == .profile { loadAllData() }
+            }
+            // Изменили турнир на его странице (записались, завершили…) — обновляем списки в профиле
+            .onChange(of: tournamentService.changeCounter) { _, _ in
+                if let userId = authService.currentUserId { loadMyTournaments(userId: userId) }
+            }
+            // «Мой профиль» из чужой страницы: закрываем все открытые окна
+            .onChange(of: appState.dismissSignal) { _, _ in
+                bookedGameId = nil
+                showReviewsList = false
+                profileToOpen = nil
+                showNotifications = false
+            }
         }
     }
 
     // MARK: - Переключатель вкладок
     // Pill-стиль как в современных iOS-приложениях
 
+    // Тот же переключатель использует чужой профиль (PlayerProfileView)
     var tabSelector: some View {
-        HStack(spacing: 0) {
-            tabButton(title: "Игры",     icon: "sportscourt.fill",       index: 0)
-            tabButton(title: "Участвую", icon: "person.fill.checkmark", index: 1)
-            tabButton(title: "Создаю",   icon: "crown.fill",             index: 2)
-        }
-        .padding(4)
-        .background(AppColor.cardBackground)
-        .cornerRadius(AppRadius.medium)
-    }
-
-    func tabButton(title: String, icon: String, index: Int) -> some View {
-        Button {
-            withAnimation(.easeInOut(duration: 0.2)) { selectedTab = index }
-        } label: {
-            HStack(spacing: 6) {
-                Image(systemName: icon)
-                    .font(.caption)
-                Text(title)
-                    .font(.subheadline.weight(.medium))
-            }
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, AppSpacing.s)
-            .background(selectedTab == index ? AppColor.background : Color.clear)
-            .foregroundColor(selectedTab == index ? AppColor.primary : AppColor.textSecondary)
-            .cornerRadius(AppRadius.small)
-        }
+        ProfileTabBar(
+            items: [
+                .init(id: 0, title: "Игры",       icon: "sportscourt.fill"),
+                .init(id: 1, title: "Статистика", icon: "chart.bar.xaxis"),
+                .init(id: 2, title: "Участвую",   icon: "person.fill.checkmark"),
+                .init(id: 3, title: "Организую",  icon: "crown.fill")
+            ],
+            selection: $selectedTab
+        )
     }
 
     // MARK: - Маршрутизатор содержимого вкладки
@@ -231,8 +280,9 @@ struct ProfileView: View {
     var tabContent: some View {
         switch selectedTab {
         case 0: myGamesTab
-        case 1: myTournamentsParticipationTab
-        case 2: myCreatedTournamentsTab
+        case 1: myStatsTab
+        case 2: myTournamentsParticipationTab
+        case 3: myCreatedTournamentsTab
         default: EmptyView()
         }
     }
@@ -276,9 +326,10 @@ struct ProfileView: View {
 
     // MARK: - Загрузка данных
 
-    // Главная функция загрузки — вызывается при .onAppear и после редактирований
-    func loadAllData() {
-        guard let userId = authService.currentUserId else { return }
+    // Главная функция загрузки — вызывается при открытии вкладки и после редактирований.
+    // `force` — после правок: данные изменились, ждать нельзя.
+    func loadAllData(force: Bool = false) {
+        guard let userId = authService.currentUserId, loadPolicy.shouldRun(force: force) else { return }
 
         // Сначала проверяем статусы (вдруг что-то завершилось пока приложение было закрыто)
         StatusManager.shared.checkAllStatuses()
@@ -297,19 +348,25 @@ struct ProfileView: View {
         
         sparringService.loadCompletedGamesCount(userId: userId)
 
-        // Загружаем активные турниры (upcoming + in_progress)
-        tournamentService.loadTournaments()
-        
+        // Матчи со счётом: для вкладки «Статистика» и отметок на карточках игр
+        matchesStore.load(userId: userId, force: true)
+
+        // Мои турниры (участвую / организую): два точечных запроса по моему id
         loadMyTournaments(userId: userId)
 
-        // Завершённые турниры и история игр НЕ загружаются здесь —
-        // они подгружаются только когда пользователь раскрывает соответствующую секцию
-        // (см. loadDataForSection)
-        
+        // Завершённые турниры приходят вместе с loadMyTournaments. История игр грузится только когда
+        // её раскрыли (см. loadDataForSection) — но если уже раскрывали, держим её свежей
+        if historyLoaded {
+            sparringService.loadMyCompletedGames(userId: userId)
+        }
+
         // Загружаем рейтинг и количество отзывов
+            Perf.begin("профиль: рейтинг и отзывы")
             ReviewService().loadRatingStats(forUserId: userId) { avg, count in
                 self.averageRating = avg
                 self.reviewsCount = count
+                Perf.end("профиль: рейтинг и отзывы")
+                Perf.mark("профиль: данные загружены")
             }
         
     }
@@ -320,6 +377,9 @@ struct ProfileView: View {
         tournamentService.loadUserTournaments(userId: userId) { participating, organizing in
             let completedParticipating = participating.filter { ($0["status"] as? String) == "completed" }
             let completedOrganizing    = organizing.filter    { ($0["status"] as? String) == "completed" }
+            let activeStatuses: Set<String> = ["upcoming", "in_progress"]
+            activeParticipationTournaments = participating.filter { activeStatuses.contains($0["status"] as? String ?? "") }
+            activeCreatedTournaments       = organizing.filter    { activeStatuses.contains($0["status"] as? String ?? "") }
 
             let allIds = Set((participating + organizing).compactMap { $0["documentId"] as? String })
 

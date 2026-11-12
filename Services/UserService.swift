@@ -10,6 +10,13 @@ final class UserService {
 
     private let db = Firestore.firestore()
 
+    /// Firestore принимает в одном запросе `in` не больше 30 значений
+    private static let batchSize = 30
+
+    /// Имена, которые уже спрашивали: на пять минут хватает — имя меняют редко,
+    /// а свои правки профиля сбрасывают запись (см. `updateProfile`)
+    private var nameCache = TimedCache<String>(ttl: 300)
+
     private init() {}
 
     // MARK: - Чтение
@@ -30,37 +37,62 @@ final class UserService {
 
     /// Имена нескольких пользователей: id → «Имя Фамилия».
     /// Пользователей без документа в результате нет.
+    /// Один запрос на каждые 30 человек (а не по запросу на человека), а уже известные имена
+    /// берутся из памяти: имена партнёров в играх и матчах повторяются постоянно.
     func fetchNames(ids: [String], completion: @escaping ([String: String]) -> Void) {
-        let uniqueIds = Array(Set(ids))
-        guard !uniqueIds.isEmpty else {
-            completion([:])
+        let uniqueIds = Set(ids).filter { !$0.isEmpty }
+        var result: [String: String] = [:]
+        var missing: [String] = []
+
+        for id in uniqueIds {
+            if let name = nameCache.value(for: id) {
+                result[id] = name
+            } else {
+                missing.append(id)
+            }
+        }
+
+        guard !missing.isEmpty else {
+            completion(result)
             return
         }
 
         let group = DispatchGroup()
-        var names: [String: String] = [:]
-
-        for id in uniqueIds {
+        for chunk in PartnerNames.chunks(missing, size: UserService.batchSize) {
             group.enter()
-            db.collection("users").document(id).getDocument { doc, _ in
-                DispatchQueue.main.async {
-                    if let data = doc?.data() {
-                        names[id] = UserService.fullName(from: data)
+            db.collection("users")
+                .whereField(FieldPath.documentID(), in: chunk)
+                .getDocuments { [weak self] snapshot, _ in
+                    DispatchQueue.main.async {
+                        for doc in snapshot?.documents ?? [] {
+                            let name = UserService.fullName(from: doc.data())
+                            self?.nameCache.set(name, for: doc.documentID)
+                            result[doc.documentID] = name
+                        }
+                        group.leave()
                     }
-                    group.leave()
                 }
-            }
         }
 
-        group.notify(queue: .main) { completion(names) }
+        group.notify(queue: .main) { completion(result) }
     }
 
     // MARK: - Запись
 
     func updateProfile(userId: String, fields: [String: Any], completion: @escaping (Error?) -> Void) {
-        db.collection("users").document(userId).updateData(fields) { error in
-            DispatchQueue.main.async { completion(error) }
+        guard ConnectionMonitor.shared.allowWrite(otherwiseFailing: completion) else { return }
+        nameCache.remove(userId)
+        db.collection("users").document(userId).updateData(fields) { [weak self] error in
+            DispatchQueue.main.async {
+                self?.nameCache.remove(userId)
+                completion(error)
+            }
         }
+    }
+
+    /// Забыть запомненные имена (выход из аккаунта)
+    func clearNameCache() {
+        nameCache.removeAll()
     }
 
     /// Обновляет копии данных автора в активных заявках и предстоящих турнирах.

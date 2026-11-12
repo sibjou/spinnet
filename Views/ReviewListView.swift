@@ -1,6 +1,8 @@
 import SwiftUI
 import FirebaseFirestore
 
+extension Review: RatedReview {}
+
 struct ReviewsListView: View {
     let userId: String
     let userName: String
@@ -8,6 +10,7 @@ struct ReviewsListView: View {
     @State private var reviews: [Review] = []
     @State private var isLoading = true
     @State private var averageRating: Double = 0
+    @State private var filter = ReviewFilter()
 
     // Актуальные имена авторов отзывов (подгружаются живьём из users)
     @State private var liveNames: [String: String] = [:]
@@ -27,11 +30,7 @@ struct ReviewsListView: View {
                 } else if reviews.isEmpty {
                     emptyState
                 } else {
-                    VStack(spacing: AppSpacing.m) {
-                        ForEach(reviews) { review in
-                            reviewCard(review)
-                        }
-                    }
+                    reviewsList
                 }
             }
             .padding(AppSpacing.l)
@@ -40,6 +39,27 @@ struct ReviewsListView: View {
         .navigationTitle("Отзывы")
         .navigationBarTitleDisplayMode(.inline)
         .onAppear { load() }
+    }
+
+    @ViewBuilder
+    private var reviewsList: some View {
+        let shown = filter.apply(to: reviews)
+
+        VStack(alignment: .leading, spacing: AppSpacing.m) {
+            if reviews.count >= FilterThreshold.reviews {
+                ReviewFilterBar(filter: $filter, reviews: reviews, shownCount: shown.count)
+            }
+
+            if shown.isEmpty {
+                FilterEmptyResult { withAnimation { filter.reset() } }
+            } else {
+                LazyVStack(spacing: AppSpacing.m) {
+                    ForEach(shown) { review in
+                        reviewCard(review)
+                    }
+                }
+            }
+        }
     }
 
     private var ratingSummary: some View {
@@ -69,17 +89,23 @@ struct ReviewsListView: View {
     private func reviewCard(_ review: Review) -> some View {
         VStack(alignment: .leading, spacing: AppSpacing.s) {
             HStack {
-                HStack(spacing: AppSpacing.s) {
-                    InitialsAvatar(
-                        fullName: liveNames[review.fromUserId] ?? review.fromUserName,
-                        userId: review.fromUserId,
-                        size: 28
-                    )
-                    // Показываем актуальное имя если подгрузили, иначе денормализованное
-                    Text(liveNames[review.fromUserId] ?? review.fromUserName)
-                        .font(.subheadline.bold())
-                        .foregroundColor(AppColor.textPrimary)
+                // Автор отзыва: тап открывает его профиль
+                NavigationLink {
+                    PlayerProfileView(userId: review.fromUserId)
+                } label: {
+                    HStack(spacing: AppSpacing.s) {
+                        InitialsAvatar(
+                            fullName: liveNames[review.fromUserId] ?? review.fromUserName,
+                            userId: review.fromUserId,
+                            size: 28
+                        )
+                        // Показываем актуальное имя если подгрузили, иначе денормализованное
+                        Text(liveNames[review.fromUserId] ?? review.fromUserName)
+                            .font(.subheadline.bold())
+                            .foregroundColor(AppColor.textPrimary)
+                    }
                 }
+                .buttonStyle(.plain)
                 Spacer()
                 HStack(spacing: 2) {
                     ForEach(1...5, id: \.self) { star in
@@ -99,7 +125,7 @@ struct ReviewsListView: View {
 
             Text(formattedDate(review.createdAt))
                 .font(.caption)
-                .foregroundColor(AppColor.textTertiary)
+                .foregroundColor(AppColor.textSecondary)
         }
         .padding(AppSpacing.l)
         .background(AppColor.cardBackground)
@@ -116,7 +142,7 @@ struct ReviewsListView: View {
                 .foregroundColor(AppColor.textSecondary)
             Text("Сыграйте с \(userName) и оставьте первую оценку")
                 .font(.subheadline)
-                .foregroundColor(AppColor.textTertiary)
+                .foregroundColor(AppColor.textSecondary)
                 .multilineTextAlignment(.center)
         }
         .padding(.top, AppSpacing.xxl)
@@ -147,10 +173,7 @@ struct ReviewsListView: View {
     }
 
     private func formattedDate(_ date: Date) -> String {
-        let f = DateFormatter()
-        f.locale = Locale(identifier: "ru_RU")
-        f.dateFormat = "d MMMM yyyy"
-        return f.string(from: date)
+        AppDate.dayLongYear(date)
     }
 
     private func reviewCountText(_ count: Int) -> String {

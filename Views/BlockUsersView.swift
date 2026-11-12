@@ -26,7 +26,7 @@ struct BlockedUsersView: View {
                                 unblock(user.id)
                             }
                             .font(.subheadline)
-                            .foregroundColor(.green)
+                            .foregroundColor(AppColor.primary)
                             .buttonStyle(.borderless)   // ← ограничивает зону нажатия только кнопкой
                         }
                         .padding(.vertical, 4)
@@ -59,7 +59,7 @@ struct BlockedUsersView: View {
 
     private func loadBlockedUsers() {
         isLoading = true
-        BlockService.shared.loadBlocks {
+        BlockService.shared.loadBlocks(force: true) {
             let ids = Array(BlockService.shared.blockedUserIds)
 
             guard !ids.isEmpty else {

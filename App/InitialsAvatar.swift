@@ -9,7 +9,12 @@ struct InitialsAvatar: View {
     var size: CGFloat = AppSize.avatarMedium
 
     private static let palette: [Color] = [
-        .green, .blue, .orange, .purple, .pink, .teal, .indigo, .red
+        Color(red: 30/255,  green: 58/255,  blue: 95/255),   // тёмно-синий
+        Color(red: 71/255,  green: 85/255,  blue: 105/255),  // сланец
+        Color(red: 15/255,  green: 118/255, blue: 110/255),  // морская волна
+        Color(red: 107/255, green: 63/255,  blue: 160/255),  // сливовый
+        Color(red: 180/255, green: 68/255,  blue: 42/255),   // кирпичный
+        Color(red: 91/255,  green: 107/255, blue: 47/255)    // оливковый
     ]
 
     private var initials: String {

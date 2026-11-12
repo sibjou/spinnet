@@ -18,7 +18,7 @@ struct LoginView: View {
                 VStack(spacing: 8) {
                     Image(systemName: "sportscourt.fill")
                         .font(.system(size: 60))
-                        .foregroundColor(.green)
+                        .foregroundColor(AppColor.primary)
                     Text("Spinnet")
                         .font(.largeTitle.bold())
                     Text("Найди спарринг-партнёра")
@@ -43,7 +43,7 @@ struct LoginView: View {
                 // Сообщение об ошибке
                 if let error = authService.errorMessage {
                     Text(error)
-                        .foregroundColor(error.contains("отправлено") ? .green : .red)
+                        .foregroundColor(error.contains("отправлено") ? AppColor.primary : .red)
                         .font(.caption)
                         .padding(.horizontal)
                         .multilineTextAlignment(.center)
@@ -64,7 +64,7 @@ struct LoginView: View {
                                             .padding()
                                     }
                                 }
-                                .background(email.isEmpty || password.isEmpty ? Color.gray.opacity(0.3) : Color.green)
+                                .background(email.isEmpty || password.isEmpty ? Color.gray.opacity(0.3) : AppColor.primary)
                                 .foregroundColor(.white)
                                 .cornerRadius(12)
                                 .padding(.horizontal)
@@ -87,7 +87,7 @@ struct LoginView: View {
                     authService.errorMessage = nil  // ← Сброс ошибки
                     showRegister = true
                 }
-                .foregroundColor(.green)
+                .foregroundColor(AppColor.primary)
                 
                 Spacer()
             }

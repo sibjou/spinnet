@@ -34,15 +34,16 @@ struct SparringRequest: Identifiable, Equatable {
         lhs.id == rhs.id && lhs.status == rhs.status
     }
 
-    // Возвращает nil если документ Firestore некорректный
+    // Возвращает nil если документ Firestore некорректный.
+    // Даты читаются и как Timestamp (Firestore), и как Date (тесты)
     init?(id: String, data: [String: Any]) {
         guard
             let userId    = data["userId"]   as? String,
-            let dateTs    = data["date"]      as? Timestamp,
+            let day       = DocumentValue.date(data["date"]),
             let timeSlot  = data["timeSlot"]  as? String,
             let location  = data["location"]  as? String,
             let status    = data["status"]    as? String,
-            let createdAt = (data["createdAt"] as? Timestamp)?.dateValue()
+            let createdAt = DocumentValue.date(data["createdAt"])
         else { return nil }
 
         self.id               = id
@@ -52,14 +53,14 @@ struct SparringRequest: Identifiable, Equatable {
         self.authorSkillLevel = data["authorSkillLevel"] as? String ?? ""
         self.authorGrip       = data["authorGrip"]       as? String ?? ""
         self.authorPlayStyle  = data["authorPlayStyle"]  as? String ?? ""
-        self.date             = dateTs.dateValue()
+        self.date             = day
         self.timeSlot         = timeSlot
         self.city             = data["city"]             as? String ?? ""
         self.location         = location
         self.desiredLevel     = data["desiredLevel"]     as? String ?? "Любой"
         self.status           = status
         self.bookedBy         = data["bookedBy"]         as? String
-        self.bookedAt         = (data["bookedAt"]        as? Timestamp)?.dateValue()
+        self.bookedAt         = DocumentValue.date(data["bookedAt"])
         self.confirmedBy      = data["confirmedBy"]      as? [String] ?? []
         self.createdAt        = createdAt
     }
