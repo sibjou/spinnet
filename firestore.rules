@@ -27,6 +27,11 @@ service cloud.firestore {
         exists(/databases/$(database)/documents/admins/$(request.auth.uid));
     }
 
+    // Заявка на спарринг по id (для проверки участников матча)
+    function sparringRequest(id) {
+      return get(/databases/$(database)/documents/sparring_requests/$(id)).data;
+    }
+
     // Изменились только перечисленные поля
     function changesOnly(keys) {
       return request.resource.data.diff(resource.data).affectedKeys().hasOnly(keys);
@@ -39,11 +44,14 @@ service cloud.firestore {
     }
 
     // ---------- Профили ----------
+    // Поле plan (тариф free / pro) клиент не создаёт и не меняет — его выставляет только сервер.
     match /users/{uid} {
       allow read: if signedIn();
-      allow create: if isOwner(uid);
-      allow update: if isOwner(uid);
-      allow delete: if false;
+      allow create: if isOwner(uid) && !('plan' in request.resource.data);
+      allow update: if isOwner(uid) &&
+        !request.resource.data.diff(resource.data).affectedKeys().hasAny(['plan']);
+      // Владелец может удалить свой профиль (кнопка «Удалить аккаунт» в настройках)
+      allow delete: if isOwner(uid);
     }
 
     // ---------- Заявки на спарринг ----------
@@ -93,6 +101,80 @@ service cloud.firestore {
       allow delete: if isOwner(resource.data.organizerId);
     }
 
+    // ---------- Матчи (счёт игры) ----------
+    // За одну встречу можно сыграть несколько матчей (не больше 6). Документ первого матча
+    // называется как заявка, следующие — «<id заявки>_2» … «_6»: номер читаем из названия.
+    // Счёт вносит любой из двух игроков. Второй подтверждает, один раз предлагает свой
+    // счёт или оспаривает. Подтверждённый и оспоренный матчи не меняются и не удаляются.
+    //
+    // Что правила НЕ проверяют: что предыдущий матч встречи уже решён (это делает приложение
+    // в транзакции) и что номера идут подряд. Лимит в 6 матчей и «один документ на номер» они держат.
+    //
+    // Об ограничении честно: двое игроков могут договориться и подтвердить любой счёт.
+    // Правила защищают от подделки одним человеком; остальное (рейтинг, поиск накруток)
+    // должен делать сервер.
+    function validMatchId(id) {
+      return id.matches('[A-Za-z0-9]+(_[2-6])?');
+    }
+
+    function matchRequestId(id) {
+      return id.split('_')[0];
+    }
+
+    match /matches/{id} {
+      allow read: if signedIn();
+
+      allow create: if signedIn() &&
+        validMatchId(id) &&
+        request.resource.data.keys().hasOnly([
+          'playerAId', 'playerBId', 'playerIds', 'games', 'bestOf', 'status', 'proposedBy',
+          'revision', 'playedAt', 'slotMinutes', 'city', 'createdAt', 'updatedAt'
+        ]) &&
+        request.resource.data.playerAId == sparringRequest(matchRequestId(id)).userId &&
+        request.resource.data.playerBId == sparringRequest(matchRequestId(id)).bookedBy &&
+        request.resource.data.playerIds ==
+          [request.resource.data.playerAId, request.resource.data.playerBId] &&
+        request.auth.uid in request.resource.data.playerIds &&
+        sparringRequest(matchRequestId(id)).status in ['booked', 'in_progress', 'completed'] &&
+        request.resource.data.status == 'proposed' &&
+        request.resource.data.proposedBy == request.auth.uid &&
+        request.resource.data.revision == 1 &&
+        request.resource.data.bestOf in [3, 5, 7] &&
+        request.resource.data.games is list &&
+        request.resource.data.games.size() >= 2 &&
+        request.resource.data.games.size() <= 7 &&
+        request.resource.data.createdAt == request.time;
+
+      allow update: if signedIn() &&
+        request.auth.uid in resource.data.playerIds &&
+        resource.data.status == 'proposed' && (
+          // автор текущей версии правит свой счёт, пока второй не ответил
+          (resource.data.proposedBy == request.auth.uid &&
+           changesOnly(['games', 'bestOf', 'updatedAt'])) ||
+          // второй игрок подтверждает
+          (resource.data.proposedBy != request.auth.uid &&
+           request.resource.data.status == 'confirmed' &&
+           request.resource.data.confirmedBy == request.auth.uid &&
+           changesOnly(['status', 'confirmedBy', 'confirmedAt', 'updatedAt'])) ||
+          // второй игрок оспаривает
+          (resource.data.proposedBy != request.auth.uid &&
+           request.resource.data.status == 'disputed' &&
+           request.resource.data.disputedBy == request.auth.uid &&
+           changesOnly(['status', 'disputedBy', 'updatedAt'])) ||
+          // второй игрок предлагает свой счёт — один раз
+          (resource.data.proposedBy != request.auth.uid &&
+           resource.data.revision == 1 &&
+           request.resource.data.revision == 2 &&
+           request.resource.data.proposedBy == request.auth.uid &&
+           request.resource.data.previousProposedBy == resource.data.proposedBy &&
+           request.resource.data.previousGames == resource.data.games &&
+           changesOnly(['games', 'bestOf', 'proposedBy', 'revision',
+                        'previousGames', 'previousProposedBy', 'updatedAt']))
+        );
+
+      allow delete: if false;
+    }
+
     // ---------- Отзывы ----------
     match /reviews/{id} {
       allow read: if signedIn();
@@ -107,18 +189,44 @@ service cloud.firestore {
     }
 
     // ---------- Согласование встреч ----------
-    // Чтение открыто для авторизованных: поиск диалога по заявке идёт без фильтра по участнику.
+    // Диалог — meeting_clarifications/{id заявки}, события в нём — meeting_actions.
+    // В диалоге теперь живая переписка, поэтому читать её могут только два участника.
+    // Условие resource == null нужно, чтобы приложение могло спросить «есть ли диалог
+    // по этой заявке» и получить ответ «нет», а не ошибку доступа.
+    function isDialogMember(clarificationId) {
+      let dialog = get(/databases/$(database)/documents/meeting_clarifications/$(clarificationId)).data;
+      return request.auth.uid in [dialog.authorId, dialog.bookedById];
+    }
+
+    // Состояние после записи: первое сообщение создаёт диалог и событие одним пакетом
+    function isDialogMemberAfter(clarificationId) {
+      let dialog = getAfter(/databases/$(database)/documents/meeting_clarifications/$(clarificationId)).data;
+      return request.auth.uid in [dialog.authorId, dialog.bookedById];
+    }
+
     match /meeting_clarifications/{id} {
-      allow read: if signedIn();
+      allow read: if signedIn() &&
+        (resource == null ||
+         request.auth.uid in [resource.data.authorId, resource.data.bookedById]);
       allow create: if signedIn() &&
         request.auth.uid in [request.resource.data.authorId, request.resource.data.bookedById];
       allow update, delete: if signedIn() &&
         request.auth.uid in [resource.data.authorId, resource.data.bookedById];
     }
 
-    // TODO: ужесточить — проверять участие в диалоге через get() на clarificationId
     match /meeting_actions/{id} {
-      allow read, write: if signedIn();
+      allow read: if signedIn() && isDialogMember(resource.data.clarificationId);
+      // отправитель — только сам вошедший
+      allow create: if signedIn() &&
+        request.resource.data.fromUserId == request.auth.uid &&
+        isDialogMemberAfter(request.resource.data.clarificationId);
+      // на предложение отвечает получатель, и меняется только статус
+      allow update: if signedIn() &&
+        isDialogMember(resource.data.clarificationId) &&
+        resource.data.fromUserId != request.auth.uid &&
+        changesOnly(['status']);
+      // удаляют при удалении диалога
+      allow delete: if signedIn() && isDialogMember(resource.data.clarificationId);
     }
 
     // ---------- Уведомления ----------
