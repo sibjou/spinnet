@@ -9,3 +9,11 @@ GoogleService-Info.plist
 
 # OS files
 .DS_Store
+
+# Ключи сервисных аккаунтов и результаты скрипта тестовых данных — в репозиторий не попадают
+*serviceAccount*.json
+*service-account*.json
+*-firebase-adminsdk-*.json
+tools/seed/out/
+__pycache__/
+*.pyc

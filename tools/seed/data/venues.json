@@ -1,0 +1,52 @@
+{
+  "_meta": {
+    "collected": "2026-10-13",
+    "about": "Реальные площадки (клубы и спорткомплексы), собранные из открытых каталогов. Адреса и работа залов могут меняться — перед публикацией скриншотов сверьтесь с картой. Наличие столов для настольного тенниса в залах кроме клубов настольного тенниса не проверялось.",
+    "address_quality": {
+      "page": "адрес прочитан на странице-источнике",
+      "listing": "адрес взят из каталога/выдачи поиска (2ГИС, sport.insure, spravker)",
+      "name_only": "в источнике есть только название и станция метро или адрес не получен"
+    }
+  },
+  "venues": [
+    {"id": "spb-ttclub", "city": "Санкт-Петербург", "name": "TTclub", "address": "ул. Ново-Рыбинская, 19/21", "metro": "Фрунзенская", "kind": "club", "quality": "page", "source": "https://peterburg2.ru/restplaces/klub-nastolnogo-tennisa-ttclub-24193.html"},
+    {"id": "spb-timeout", "city": "Санкт-Петербург", "name": "Time Out", "address": "ул. Ново-Рыбинская, 19", "metro": "Фрунзенская", "kind": "club", "quality": "page", "source": "https://peterburg2.ru/restplaces/klub-nastolnogo-tennisa-time-out-24194.html"},
+    {"id": "spb-ttball", "city": "Санкт-Петербург", "name": "TT Ball", "address": "ул. Шереметьевская, 15", "metro": "Звёздная", "kind": "club", "quality": "page", "source": "https://peterburg2.ru/restplaces/klub-nastolnogo-tennisa-tt-ball-24195.html"},
+    {"id": "spb-matchball", "city": "Санкт-Петербург", "name": "Матчбол", "address": "ул. Пионерская, 21", "metro": "Чкаловская", "kind": "club", "quality": "page", "source": "https://peterburg2.ru/restplaces/klub-nastolnogo-tennisa-matchbol-24197.html"},
+    {"id": "spb-narvskiy", "city": "Санкт-Петербург", "name": "Нарвский", "address": "ул. Перекопская, 8", "metro": "Нарвская", "kind": "club", "quality": "page", "source": "https://peterburg2.ru/restplaces/klub-nastolnogo-tennisa-narvskiy-24196.html"},
+
+    {"id": "msk-arttt", "city": "Москва", "name": "ArtTT", "address": "", "metro": "Первомайская", "kind": "club", "quality": "name_only", "source": "https://t-j.ru/short/ping-pong-moscow/"},
+    {"id": "msk-newton", "city": "Москва", "name": "Newton Arena", "address": "", "metro": "Нагатинская", "kind": "club", "quality": "name_only", "source": "https://t-j.ru/short/ping-pong-moscow/"},
+    {"id": "msk-point", "city": "Москва", "name": "Point", "address": "", "metro": "Чертановская", "kind": "club", "quality": "name_only", "source": "https://t-j.ru/short/ping-pong-moscow/"},
+    {"id": "msk-spinart", "city": "Москва", "name": "SpinArt", "address": "", "metro": "Кленовый бульвар", "kind": "club", "quality": "name_only", "source": "https://t-j.ru/short/ping-pong-moscow/"},
+    {"id": "msk-tenix", "city": "Москва", "name": "Tenix", "address": "", "metro": "Академическая", "kind": "club", "quality": "name_only", "source": "https://t-j.ru/short/ping-pong-moscow/"},
+    {"id": "msk-v2", "city": "Москва", "name": "V2 Table Tennis Club", "address": "", "metro": "Лефортово", "kind": "club", "quality": "name_only", "source": "https://t-j.ru/short/ping-pong-moscow/"},
+    {"id": "msk-lutsentr", "city": "Москва", "name": "ЛуЦентр", "address": "", "metro": "Бауманская", "kind": "club", "quality": "name_only", "source": "https://t-j.ru/short/ping-pong-moscow/"},
+    {"id": "msk-gorky", "city": "Москва", "name": "Парк Горького", "address": "", "metro": "Октябрьская", "kind": "club", "quality": "name_only", "source": "https://t-j.ru/short/ping-pong-moscow/"},
+    {"id": "msk-setka", "city": "Москва", "name": "Сетка", "address": "", "metro": "Бунинская аллея", "kind": "club", "quality": "name_only", "source": "https://t-j.ru/short/ping-pong-moscow/"},
+    {"id": "msk-partiya", "city": "Москва", "name": "Партия", "address": "", "metro": "ЦСКА", "kind": "club", "quality": "name_only", "source": "https://t-j.ru/short/ping-pong-moscow/"},
+
+    {"id": "tsk-politechnik", "city": "Томск", "name": "ФОК «Политехник» ТПУ", "address": "ул. Савиных, 5", "metro": "", "kind": "sport_complex", "quality": "page", "source": "https://fsc.tpu.ru/"},
+    {"id": "tsk-tpu-fsc", "city": "Томск", "name": "Физкультурно-спортивный центр ТПУ", "address": "ул. Карпова, 4", "metro": "", "kind": "sport_complex", "quality": "listing", "source": "https://2gis.ru/tomsk/firm/422740746056186"},
+    {"id": "tsk-shevelev", "city": "Томск", "name": "Учебно-спортивный центр им. В. А. Шевелева", "address": "ул. Смирнова, 28, стр. 2", "metro": "", "kind": "sport_complex", "quality": "listing", "source": "https://tomsk.spravker.ru/sportivnye-kompleksy/"},
+    {"id": "tsk-jupiter", "city": "Томск", "name": "СК «Юпитер»", "address": "ул. Смирнова, 48Б", "metro": "", "kind": "sport_complex", "quality": "listing", "source": "https://tomsk.spravker.ru/sportivnye-kompleksy/"},
+    {"id": "tsk-sibgmu", "city": "Томск", "name": "Спорткомплекс СибГМУ", "address": "Учебная ул., 41", "metro": "", "kind": "sport_complex", "quality": "listing", "source": "https://tomsk.spravker.ru/sportivnye-kompleksy/"},
+
+    {"id": "nsk-protennis", "city": "Новосибирск", "name": "Про-Теннис", "address": "5-й Трикотажный пер., 23", "metro": "", "kind": "club", "quality": "listing", "source": "https://2gis.ru/novosibirsk/firm/70000001094766571"},
+    {"id": "nsk-lovers", "city": "Новосибирск", "name": "Клуб любителей настольного тенниса", "address": "пл. Карла Маркса, 5", "metro": "", "kind": "club", "quality": "listing", "source": "https://sport.insure/zhurnal/sektsii/novosibirsk/nastolnyy-tennis/"},
+    {"id": "nsk-solaris", "city": "Новосибирск", "name": "Клуб «Солярис»", "address": "", "metro": "", "kind": "club", "quality": "name_only", "source": "https://rttf.ru/halls/432"},
+    {"id": "nsk-istok", "city": "Новосибирск", "name": "ФСЦ «Исток»", "address": "ул. Зыряновская, 125/1", "metro": "", "kind": "sport_complex", "quality": "listing", "source": "https://sport.insure/zhurnal/sektsii/novosibirsk/nastolnyy-tennis/"},
+    {"id": "nsk-nika", "city": "Новосибирск", "name": "СК «Ника»", "address": "ул. Первомайская, 144/1", "metro": "", "kind": "sport_complex", "quality": "listing", "source": "https://sport.insure/zhurnal/sektsii/novosibirsk/nastolnyy-tennis/"},
+    {"id": "nsk-lider", "city": "Новосибирск", "name": "ФСЦ «Лидер»", "address": "ул. Курчатова, 3/4", "metro": "", "kind": "sport_complex", "quality": "listing", "source": "https://sport.insure/zhurnal/sektsii/novosibirsk/nastolnyy-tennis/"},
+
+    {"id": "kem-arena", "city": "Кемерово", "name": "Кузбасс-Арена", "address": "", "metro": "", "kind": "club", "quality": "name_only", "source": "https://rttf.ru/halls/625"},
+    {"id": "kem-iskra", "city": "Кемерово", "name": "СК «Искра»", "address": "ул. Леонова, 3", "metro": "", "kind": "sport_complex", "quality": "listing", "source": "https://sport.insure/zhurnal/sektsii/kemerovo/nastolnyy-tennis/"},
+    {"id": "kem-voskhod", "city": "Кемерово", "name": "СК «Восход»", "address": "ул. Свободы, 6б", "metro": "", "kind": "sport_complex", "quality": "listing", "source": "https://sport.insure/zhurnal/sektsii/kemerovo/nastolnyy-tennis/"},
+    {"id": "kem-soyuz", "city": "Кемерово", "name": "СК «Союз»", "address": "б-р Строителей, 12", "metro": "", "kind": "sport_complex", "quality": "listing", "source": "https://sport.insure/zhurnal/sektsii/kemerovo/nastolnyy-tennis/"},
+    {"id": "kem-dyussh5", "city": "Кемерово", "name": "ДЮСШ №5", "address": "ул. Инициативная, 90", "metro": "", "kind": "sport_complex", "quality": "listing", "source": "https://sport.insure/zhurnal/sektsii/kemerovo/nastolnyy-tennis/"},
+    {"id": "kem-chibis", "city": "Кемерово", "name": "СК «Чибис»", "address": "пр. Ленинградский, 13б", "metro": "", "kind": "sport_complex", "quality": "listing", "source": "https://sport.insure/zhurnal/sektsii/kemerovo/nastolnyy-tennis/"},
+
+    {"id": "mrm-club", "city": "Мурманск", "name": "Спортклуб «Настольный теннис»", "address": "ул. Инженерная, 2а", "metro": "", "kind": "club", "quality": "listing", "source": "https://sport.insure/zhurnal/sektsii/murmansk/nastolnyy-tennis/"},
+    {"id": "mrm-dyusash15", "city": "Мурманск", "name": "ДЮСАШ №15", "address": "ул. Баумана, 1", "metro": "", "kind": "sport_complex", "quality": "listing", "source": "https://sport.insure/zhurnal/sektsii/murmansk/nastolnyy-tennis/"}
+  ]
+}
